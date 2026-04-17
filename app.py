@@ -207,14 +207,9 @@ def upload_csv():
         from utils import generate_charts
         results_list, warnings = predict_batch(df, model, scaler, encoders)
         
-        # Freshly regenerate dashboard charts based on the new batch data
-        batch_df = pd.DataFrame(results_list)
-        # Merge back categorical columns from original df for better plotting context
-        for col in ['Item_Type', 'Outlet_Type', 'Item_MRP']:
-            if col in df.columns:
-                batch_df[col] = df[col]
-                
-        generate_charts(batch_df, model=model, feature_names=model.feature_names_in_, charts_dir=CHARTS_DIR)
+        # NOTE: Server-side chart generation (matplotlib) is disabled to stay within Vercel's 500MB limit.
+        # Visual analytics are now handled client-side via Chart.js in the dashboard.
+        # generate_charts(batch_df, model=model, feature_names=model.feature_names_in_, charts_dir=CHARTS_DIR)
         
         batch_report = generate_batch_report(results_list)
         

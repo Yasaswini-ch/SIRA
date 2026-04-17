@@ -113,7 +113,7 @@ def train_and_evaluate(models_dir='models', charts_dir='static/charts'):
     best_model_instance = models[best_model_name]
     
     print("\n" + "=" * 70)
-    print(f"★ WINNING MODEL: {best_model_name} ★")
+    print(f"WINNING MODEL: {best_model_name}")
     print("=" * 70)
     print(f"Reason: '{best_model_name}' achieved the lowest Cross-Validated Root Mean Squared Error "
           f"({results_df.loc[best_idx, 'CV RMSE Mean']} ± {results_df.loc[best_idx, 'CV RMSE Std']}). "
