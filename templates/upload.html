@@ -413,6 +413,21 @@
                     </a>
                 </div>
             </div>
+            
+            <!-- Trend Summary Widget -->
+            <div class="glass-card" style="padding: 1.2rem; margin-bottom: 2rem; display: flex; justify-content: space-around; border-top: 2px solid var(--color-blue); text-align: center;">
+                <div style="cursor: pointer; font-size: 0.95rem; font-weight: 500;" onclick="filterTrend('up')">
+                    <span id="trendUpCount" style="color: var(--color-green); font-size: 1.4rem; font-weight: 700; font-family: 'Outfit';">0</span> items trending UP ↑
+                </div>
+                <div style="width: 1px; background: var(--border-subtle);"></div>
+                <div style="cursor: pointer; font-size: 0.95rem; font-weight: 500;" onclick="filterTrend('down')">
+                    <span id="trendDownCount" style="color: var(--color-red); font-size: 1.4rem; font-weight: 700; font-family: 'Outfit';">0</span> items trending DOWN ↓
+                </div>
+                <div style="width: 1px; background: var(--border-subtle);"></div>
+                <div style="cursor: pointer; font-size: 0.95rem; font-weight: 500;" onclick="filterTrend('spike')">
+                    <span id="trendSpikeCount" style="color: var(--color-orange); font-size: 1.4rem; font-weight: 700; font-family: 'Outfit';">0</span> seasonal spikes detected 🟠
+                </div>
+            </div>
 
             <div class="table-container">
                 <table id="resultsTable">
@@ -420,8 +435,9 @@
                         <tr>
                             <th style="cursor: pointer;" onclick="sortTable(0)">Item ID ↕</th>
                             <th>Item Type</th>
-                            <th style="cursor: pointer;" onclick="sortTable(2)">Forecast ↕</th>
-                            <th style="cursor: pointer;" onclick="sortTable(3)">Order Qty ↕</th>
+                            <th>Trend</th>
+                            <th style="cursor: pointer;" onclick="sortTable(3)">Forecast ↕</th>
+                            <th style="cursor: pointer;" onclick="sortTable(4)">Order Qty ↕</th>
                             <th>Status</th>
                             <th>Action</th>
                         </tr>
@@ -543,6 +559,20 @@
             }
         });
 
+        // --- Sparkline Function ---
+        function drawSparkline(containerId, data, color) {
+            const svg = document.getElementById(containerId);
+            if (!svg || !data || data.length === 0) return;
+            const w = 100, h = 30;
+            const max = Math.max(...data), min = Math.min(...data);
+            const pts = data.map((v, i) => {
+                const x = (i / (data.length - 1)) * w;
+                const y = h - ((v - min) / (max - min + 0.001)) * h;
+                return x + "," + y;
+            }).join(" ");
+            svg.innerHTML = '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="2"/>';
+        }
+
         // --- Render Logic ---
         function renderResults(data, metrics) {
             // Summary Stats
@@ -551,6 +581,20 @@
             document.getElementById('statWarningItems').innerText = metrics.warning_alerts_count;
             document.getElementById('statAvgDemand').innerText = metrics.average_demand_forecast;
 
+            // Trend Summary Stats
+            if (metrics.trend_summary) {
+                document.getElementById('trendUpCount').innerText = metrics.trend_summary.up;
+                document.getElementById('trendDownCount').innerText = metrics.trend_summary.down;
+                document.getElementById('trendSpikeCount').innerText = metrics.trend_summary.spike;
+            }
+
+            filterAndRender();
+        }
+
+        let activeTrendFilter = 'ALL';
+
+        function filterTrend(type) {
+            activeTrendFilter = activeTrendFilter === type ? 'ALL' : type;
             filterAndRender();
         }
 
@@ -559,21 +603,50 @@
             const tbody = document.getElementById('resultsBody');
             tbody.innerHTML = '';
 
-            const filtered = filterVal === 'ALL' ? batchData : batchData.filter(i => i.Alert_Level === filterVal);
+            let filtered = filterVal === 'ALL' ? batchData : batchData.filter(i => i.Alert_Level === filterVal);
+            
+            if (activeTrendFilter !== 'ALL') {
+                if (activeTrendFilter === 'up') filtered = filtered.filter(i => i.Trend && i.Trend.direction === 'up');
+                if (activeTrendFilter === 'down') filtered = filtered.filter(i => i.Trend && i.Trend.direction === 'down');
+                if (activeTrendFilter === 'spike') filtered = filtered.filter(i => i.Trend && i.Trend.seasonal_flag);
+            }
 
-            filtered.forEach(item => {
+            filtered.forEach((item, idx) => {
                 const tr = document.createElement('tr');
                 const levelClass = `cell-${item.Alert_Level.toLowerCase()}`;
                 
+                let trendColor = '#94a3b8';
+                let trendArrow = '→';
+                if (item.Trend && item.Trend.direction === 'up') { trendColor = '#10b981'; trendArrow = '↑'; }
+                if (item.Trend && item.Trend.direction === 'down') { trendColor = '#ef4444'; trendArrow = '↓'; }
+                
+                let spikeDot = '';
+                if (item.Trend && item.Trend.seasonal_flag) {
+                    spikeDot = `<span style="color: #f97316; cursor: help; margin-left: 5px;" title="Seasonal spike detected">🟠</span>`;
+                }
+                
+                const sparkId = `spark-${idx}`;
+                
                 tr.innerHTML = `
                     <td style="font-weight: 600;">${item.Item_Identifier}</td>
-                    <td style="color: var(--text-muted); font-size: 0.85rem;">Retail Item</td>
+                    <td style="color: var(--text-muted); font-size: 0.85rem;">${item.Item_Type || 'Retail Item'}</td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <svg id="${sparkId}" width="100" height="30" style="background: rgba(0,0,0,0.2); border-radius: 4px;"></svg>
+                            <span style="color: ${trendColor}; font-weight: bold;">${trendArrow}</span>
+                            ${spikeDot}
+                        </div>
+                    </td>
                     <td>${item.Predicted_Demand}</td>
                     <td style="font-weight: 700; color: var(--primary-orange);">${item.Restock_Qty}</td>
                     <td><span class="alert-cell ${levelClass}">${item.Alert_Level}</span></td>
                     <td><a href="#" style="color: var(--color-blue); font-size: 0.8rem; text-decoration: none;">Order Now</a></td>
                 `;
                 tbody.appendChild(tr);
+                
+                if (item.Trend && item.Trend.sparkline_data) {
+                    drawSparkline(sparkId, item.Trend.sparkline_data, trendColor);
+                }
             });
         }
 

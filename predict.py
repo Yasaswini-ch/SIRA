@@ -131,6 +131,9 @@ def predict_batch(df, model, scaler, encoders):
         restock_info = calculate_restock_quantity(prediction_val, curr_stock)
         alert_info = generate_alert(curr_stock, restock_info['reorder_point'], prediction_val)
         
+        hist = generate_synthetic_history(prediction_val, str(row.get('Item_Type', 'Item')))
+        trend_info = detect_trend(hist)
+
         results_list.append({
             'Item_Identifier': str(row.get('Item_Identifier', f'ITM-{idx}')),
             'Outlet_Identifier': str(row.get('Outlet_Identifier', 'OUT-UNKNOWN')),
@@ -141,7 +144,8 @@ def predict_batch(df, model, scaler, encoders):
             'Item_Type': str(row.get('Item_Type', 'Item')),
             'Alert_Level': alert_info['level'],
             'Alert_Message': alert_info['message'],
-            'Alert_Color': alert_info['color']
+            'Alert_Color': alert_info['color'],
+            'Trend': trend_info
         })
         
     return results_list, warnings
@@ -179,7 +183,71 @@ def generate_batch_report(results_list):
         'overstock': overstock_total,
         'stockout': stockout_total,
         'savings': (overstock_total + stockout_total) * 0.45, # Est. optimization impact
-        'top_items': loss_items_list
+        'top_items': loss_items_list,
+        
+        # Trend Summary
+        'trend_summary': {
+            'up': sum(1 for r in results_list if r.get('Trend', {}).get('direction') == 'up'),
+            'down': sum(1 for r in results_list if r.get('Trend', {}).get('direction') == 'down'),
+            'spike': sum(1 for r in results_list if r.get('Trend', {}).get('seasonal_flag'))
+        }
     }
     
     return report
+
+def detect_trend(sales_history: list, window: int = 4) -> dict:
+    """
+    sales_history: list of monthly sales values (from BigMart or synthetic)
+    window: rolling window size
+    Returns trend direction, strength, and seasonal flag.
+    """
+    import numpy as np
+    
+    if len(sales_history) < window * 2:
+        return {"direction": "stable", "strength": 0, "seasonal_flag": False}
+        
+    # Simple linear trend using polyfit
+    x = np.arange(len(sales_history))
+    slope, intercept = np.polyfit(x, sales_history, 1)
+        
+    # Normalize slope as % change per period
+    mean_sales = np.mean(sales_history)
+    trend_pct = (slope / mean_sales) * 100 if mean_sales > 0 else 0
+        
+    # Rolling volatility to detect seasonal spikes
+    rolling_std = np.std(sales_history[-window:])
+    baseline_std = np.std(sales_history[:-window])
+    volatility_ratio = rolling_std / baseline_std if baseline_std > 0 else 1
+        
+    direction = "up" if trend_pct > 3 else ("down" if trend_pct < -3 else "stable")
+    seasonal_flag = volatility_ratio > 1.5  # Recent volatility is 1.5x baseline
+        
+    return {
+        "direction": direction,
+        "trend_pct": round(trend_pct, 1),
+        "strength": min(abs(trend_pct) / 10, 1.0),  # 0-1 scale
+        "seasonal_flag": seasonal_flag,
+        "volatility_ratio": round(volatility_ratio, 2),
+        "sparkline_data": sales_history[-8:]  # Last 8 periods for chart
+    }
+
+def generate_synthetic_history(base_demand, item_type):
+    """
+    Creates 12 months of plausible sales history for items that don't have one.
+    Adds seasonal multipliers for Indian retail context:
+    October-November: 1.4x (Diwali)
+    January: 1.2x (New Year)
+    March-April: 1.15x (Holi/summer start)
+    """
+    import numpy as np
+    
+    multipliers = [1.2, 1.0, 1.15, 1.15, 1.0, 1.0, 1.0, 1.0, 1.0, 1.4, 1.4, 1.0]
+    
+    history = []
+    for m in multipliers:
+        # Add slight random noise to make it look realistic (normal distribution, 5% std dev)
+        noise = np.random.normal(1.0, 0.05)
+        monthly_sales = base_demand * m * noise
+        history.append(max(0, int(monthly_sales)))
+        
+    return history
