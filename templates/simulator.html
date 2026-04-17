@@ -110,6 +110,41 @@
             box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4);
         }
 
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .system-pill {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: var(--color-green);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--color-green);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--color-green);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
         main {
             flex: 1;
             padding: 7rem 4rem 3rem;
@@ -343,6 +378,12 @@
                 });
             });
         </script>
+        <div class="nav-right">
+            <div class="system-pill">
+                <div class="pulse-dot"></div>
+                ML Engine: Active
+            </div>
+        </div>
     </nav>
 
     <main>
