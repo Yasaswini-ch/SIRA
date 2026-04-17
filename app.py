@@ -66,6 +66,10 @@ def index():
 def dashboard():
     return render_template('dashboard.html')
 
+@app.route('/simulator')
+def simulator():
+    return render_template('simulator.html')
+
 @app.route('/upload')
 def upload():
     return render_template('upload.html')
