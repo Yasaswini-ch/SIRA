@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | SIRA</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Palette specific to dashboard UI */
+            --bg-sidebar: #0f172a;
+            --bg-main: #1e293b;
+            --bg-card: rgba(15, 23, 42, 0.4);
+            --primary-orange: #f97316;
+            --orange-hover: #ea580c;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-subtle: rgba(255, 255, 255, 0.1);
+            
+            /* Alerts */
+            --color-blue: #3b82f6;
+            --color-green: #10b981;
+            --color-red: #ef4444;
+            --color-yellow: #eab308;
+            --color-orange: #f97316;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            color: var(--text-main);
+            background: var(--bg-main);
+            overflow-x: hidden;
+        }
+
+        /* ===== ENHANCED HORIZONTAL NAVBAR ===== */
+        nav {
+            background: rgba(15, 23, 42, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.2rem 4rem;
+            border-bottom: 1px solid var(--border-subtle);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            backdrop-filter: blur(20px);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        nav.scrolled {
+            padding: 0.7rem 4rem;
+            background: rgba(15, 23, 42, 0.95);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border-bottom: 1px solid rgba(249, 115, 22, 0.2);
+        }
+
+        .logo {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.8rem;
+            color: var(--primary-orange);
+            text-decoration: none;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            letter-spacing: -0.5px;
+        }
+        .logo::before {
+            content: "📈";
+            font-size: 1.5rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 0.4rem;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 5px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 600;
+            padding: 0.6rem 1.4rem;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-links a.active {
+            background: var(--primary-orange);
+            color: white;
+            box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4);
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .system-pill {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: var(--color-green);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--color-green);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--color-green);
+            animation: pulse 2s infinite;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: var(--color-green);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--color-green);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        main {
+            flex: 1;
+            padding: 7rem 4rem 3rem; /* Extra top padding for fixed nav */
+        }
+
+        h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            color: #fff;
+        }
+
+        .glass-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2);
+            margin-bottom: 3rem;
+        }
+
+        /* ===== SECTION 1: Predictor ===== */
+        form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        select, input {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            padding: 0.9rem;
+            border-radius: 8px;
+            outline: none;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+        }
+
+        select:focus, input:focus {
+            border-color: var(--primary-orange);
+            box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.2);
+        }
+        
+        select option {
+            background: var(--bg-main);
+        }
+
+        .btn-predict {
+            background: var(--primary-orange);
+            color: #fff;
+            border: none;
+            padding: 0.9rem 2.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            grid-column: 1 / -1;
+            justify-self: start;
+            box-shadow: 0 4px 6px rgba(249,115,22,0.3);
+            font-size: 1rem;
+        }
+
+        .btn-predict:hover {
+            background: var(--orange-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-predict:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .spinner {
+            display: none;
+            width: 18px;
+            height: 18px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Dynamic Result Cards */
+        .results-container {
+            display: none; 
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+            animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp { 
+            from { opacity: 0; transform: translateY(20px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+
+        .result-card {
+            padding: 1.5rem;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            border: 1px solid var(--border-subtle);
+            background: rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+
+        .result-card:hover { transform: translateY(-5px); }
+        .result-card h4 { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;}
+        .result-card .val { font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 700; line-height: 1; margin-top: 0.5rem;}
+
+        .rc-blue { background: rgba(59, 130, 246, 0.1); color: var(--color-blue); border-color: rgba(59, 130, 246, 0.3); }
+        .rc-orange { background: rgba(249, 115, 22, 0.1); color: var(--primary-orange); border-color: rgba(249, 115, 22, 0.3); }
+
+        /* ===== SECTION 2: Metrics Row ===== */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .metric {
+            background: var(--bg-card);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-subtle);
+            text-align: center;
+        }
+
+        .metric h4 { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.8rem; font-weight: 600;}
+        .metric .val { font-family: 'Outfit', sans-serif; font-size: 2rem; font-weight: 700; color: #fff; }
+
+        /* ===== SECTION 3: Charts ===== */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 2.5rem;
+            padding-bottom: 3rem;
+        }
+
+        .chart-box {
+            background: var(--bg-card);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .chart-box h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .chart-box img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            opacity: 0.9;
+            transition: opacity 0.3s;
+        }
+        
+        .chart-box img:hover { opacity: 1; }
+
+        .chart-desc {
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            border-top: 1px solid var(--border-subtle);
+            padding-top: 0.8rem;
+        }
+
+        @media (max-width: 1024px) {
+            body { flex-direction: column; overflow-y: auto;}
+            aside { width: 100%; flex-direction: row; align-items: center; justify-content: space-between; padding: 1rem 2rem; border-right: none; border-bottom: 1px solid var(--border-subtle); }
+            .logo { margin-bottom: 0; }
+            .nav-links { flex-direction: row; gap: 0.5rem; }
+            .status-badge { display: none; }
+            main { padding: 2rem; overflow: visible;}
+        }
+    </style>
+</head>
+<body>
+
+    <nav id="mainNav">
+        <a href="/" class="logo">SIRA</a>
+        <div class="nav-links">
+            <a href="/dashboard" class="active">Overview</a>
+            <a href="#predict">Predictor</a>
+            <a href="/upload">Batch Upload</a>
+            <a href="#charts">Analytics</a>
+        </div>
+        <div class="nav-right">
+            <div class="system-pill">
+                <div class="pulse-dot"></div>
+                ML Engine: Active
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem;">
+            <div>
+                <h1 style="font-family: 'Outfit'; font-size: 2.2rem; margin-bottom: 0.5rem;">Global Inventory Health</h1>
+                <p style="color: var(--text-muted);">Real-time intelligence across all retail outlets and item categories.</p>
+            </div>
+            <div style="text-align: right;">
+                <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Last ML Update</span><br>
+                <span style="font-weight: 600; font-size: 0.9rem;">Automated Real-Time Inferences</span>
+            </div>
+        </div>
+
+        <!-- Section 1: Metrics Overview -->
+        <section class="metrics-grid">
+            <div class="metric">
+                <h4>System Inferences</h4>
+                <div class="val" id="statTotal">1,240</div>
+            </div>
+            <div class="metric">
+                <h4>Average Demand</h4>
+                <div class="val" id="statAvg">2,150</div>
+            </div>
+            <div class="metric">
+                <h4>Critical Alerts</h4>
+                <div class="val" id="statCritical" style="color: var(--color-red);">12</div>
+            </div>
+            <div class="metric" style="border-bottom: 2px solid var(--color-green);">
+                <h4>Safe Stock Levels</h4>
+                <div class="val" id="statSafe" style="color: var(--color-green);">84%</div>
+            </div>
+        </section>
+
+        <!-- Section 2: Primary Analytics Charts -->
+        <h2 style="margin-top: 1rem;">Visual Intelligence</h2>
+        <section id="charts" class="charts-grid">
+            <div class="chart-box">
+                <h2>Predictive Feature Importance</h2>
+                <img src="/charts/feature_importance.png" alt="Feature Importance Chart" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
+                <p class="chart-desc">Identifies the top 15 key factors, such as price and visibility, driving forecasted product demand.</p>
+            </div>
+            <div class="chart-box">
+                <h2>Sales Volume Distribution</h2>
+                <img src="/charts/sales_distribution.png" alt="Sales Distribution Chart" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
+                <p class="chart-desc">Visualizes the frequency and spread of unit sales across the entire inventory catalog.</p>
+            </div>
+            <div class="chart-box">
+                <h2>Inventory Alert Distribution</h2>
+                <img src="/charts/alert_distribution.png" alt="Alert Distribution" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
+                <p class="chart-desc">Breakdown of stock health levels showing the percentage of items in critical vs safe states.</p>
+            </div>
+            <div class="chart-box">
+                <h2>Restock Intensity Heatmap</h2>
+                <img src="/charts/restock_heatmap.png" alt="Restock Heatmap" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
+                <p class="chart-desc">Maps replenishment needs across different outlet types to pinpoint logistics hotspots.</p>
+            </div>
+            <div class="chart-box">
+                <h2>Demand by Category</h2>
+                <img src="/charts/demand_by_category.png" alt="Demand by Category" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
+                <p class="chart-desc">Compares average forecasted sales volume across the top 10 product categories.</p>
+            </div>
+            <div class="chart-box">
+                <h2>Price vs Demand Correlation</h2>
+                <img src="/charts/mrp_vs_demand.png" alt="MRP vs Demand" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
+                <p class="chart-desc">Analyzes the relationship between unit price (MRP) and sales volume across store locations.</p>
+            </div>
+        </section>
+
+        <!-- Section 3: Interactive Predictor -->
+        <section id="predict" class="glass-card" style="margin-top: 4rem; border-top: 2px solid var(--primary-orange);">
+            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 1.5rem;">
+                <div style="width: 10px; height: 35px; background: var(--primary-orange); border-radius: 4px;"></div>
+                <h2 style="margin-bottom: 0;">On-Demand Simulation Hub</h2>
+            </div>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">Run real-time scenario modeling for specific inventory SKU/Location combinations.</p>
+            
+            <form id="predictForm">
+                <div class="form-group">
+                    <label>Item Type</label>
+                    <select id="itemType" required>
+                        <option value="Dairy">Dairy</option>
+                        <option value="Soft Drinks">Soft Drinks</option>
+                        <option value="Meat">Meat</option>
+                        <option value="Fruits and Vegetables">Fruits and Vegetables</option>
+                        <option value="Household">Household</option>
+                        <option value="Snack Foods">Snack Foods</option>
+                        <option value="Frozen Foods">Frozen Foods</option>
+                        <option value="Baking Goods">Baking Goods</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Item MRP ($)</label>
+                    <input type="number" id="itemMrp" step="1" value="142" required>
+                </div>
+                <div class="form-group">
+                    <label>Outlet Type</label>
+                    <select id="outletType" required>
+                        <option value="Supermarket Type1">Supermarket Type1</option>
+                        <option value="Supermarket Type2">Supermarket Type2</option>
+                        <option value="Supermarket Type3">Supermarket Type3</option>
+                        <option value="Grocery Store">Grocery Store</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Location Type</label>
+                    <select id="locationType" required>
+                        <option value="Tier 1">Tier 1</option>
+                        <option value="Tier 2">Tier 2</option>
+                        <option value="Tier 3">Tier 3</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Current Stock</label>
+                    <input type="number" id="currentStock" value="15" required>
+                </div>
+                <button type="submit" id="btnPredict" class="btn-predict">
+                    Launch Prediction <span class="spinner" id="spinner"></span>
+                </button>
+            </form>
+
+            <div class="results-container" id="resultsContainer">
+                <div class="result-card rc-blue">
+                    <h4>Demand Forecast</h4>
+                    <div class="val" id="resDemand">0.0</div>
+                </div>
+                <div class="result-card rc-orange">
+                    <h4>Restock Quantity</h4>
+                    <div class="val" id="resRestock">0</div>
+                </div>
+                <div class="result-card" id="alertCard">
+                    <h4>Alert Status</h4>
+                    <div class="val" id="resAlert" style="font-size: 1.5rem; font-weight: 500;">Awaiting Data</div>
+                </div>
+            </div>
+        </section>
+
+        </section>
+    </main>
+
+    <!-- UI Logic Script -->
+    <script>
+        // Real-time DOM tracking counters
+        let totalStats = 0;
+        let cumulativeDemand = 0;
+        let criticalCount = 0;
+        let safeCount = 0;
+
+        document.getElementById('predictForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            
+            const btn = document.getElementById('btnPredict');
+            const spinner = document.getElementById('spinner');
+            const resContainer = document.getElementById('resultsContainer');
+            
+            // Interaction States
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+            resContainer.style.display = 'none';
+
+            // Extract JSON payload
+            const payload = {
+                Item_Type: document.getElementById('itemType').value,
+                Item_MRP: parseFloat(document.getElementById('itemMrp').value),
+                Outlet_Type: document.getElementById('outletType').value,
+                Outlet_Location_Type: document.getElementById('locationType').value,
+                current_stock: parseInt(document.getElementById('currentStock').value)
+            };
+
+            try {
+                // Fetch to app.py Predict Endpoint
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if(data.error) throw new Error(data.error);
+
+                // Populate Specific Results
+                document.getElementById('resDemand').textContent = data.forecast.total_monthly_demand.toFixed(2);
+                document.getElementById('resRestock').textContent = data.restock_directive.suggested_order_qty;
+                
+                const alertCard = document.getElementById('alertCard');
+                const alertText = document.getElementById('resAlert');
+                
+                // Color mappings using hex/css naming
+                const colorMap = {
+                    'red': 'var(--color-red)',
+                    'orange': 'var(--primary-orange)',
+                    'yellow': 'var(--color-yellow)',
+                    'green': 'var(--color-green)'
+                };
+                
+                const hexMap = {
+                    'red': '239, 68, 68',
+                    'orange': '249, 115, 22',
+                    'yellow': '234, 179, 8',
+                    'green': '16, 185, 129'
+                };
+
+                const baseColor = data.alert.color || 'blue';
+                const styleColor = colorMap[baseColor] || 'white';
+                const rgbaColor = hexMap[baseColor] || '255,255,255';
+                
+                alertText.textContent = `${data.alert.level}: ${data.alert.message}`;
+                alertText.style.color = styleColor;
+                alertCard.style.borderColor = `rgba(${rgbaColor}, 0.5)`;
+                alertCard.style.background = `rgba(${rgbaColor}, 0.1)`;
+
+                // Slide Up UI Reveal
+                resContainer.style.display = 'grid';
+
+                // Aggregate Metrics Update
+                totalStats++;
+                cumulativeDemand += data.forecast.total_monthly_demand;
+                if(data.alert.level === 'CRITICAL') criticalCount++;
+                if(data.alert.level === 'SAFE') safeCount++;
+
+                document.getElementById('statTotal').textContent = totalStats;
+                document.getElementById('statAvg').textContent = (cumulativeDemand / totalStats).toFixed(2);
+                document.getElementById('statCritical').textContent = criticalCount;
+                document.getElementById('statSafe').textContent = safeCount;
+
+            } catch (error) {
+                console.error(error);
+                alert('Prediction Integration Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = 'none';
+            }
+        });
+        // Navbar Scroll Effect
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('mainNav');
+            if (window.scrollY > 50) {
+                nav.classList.add('scrolled');
+            } else {
+                nav.classList.remove('scrolled');
+            }
+        });
+    </script>
+</body>
+</html>
