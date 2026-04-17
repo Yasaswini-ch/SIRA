@@ -159,8 +159,8 @@ def generate_batch_report(results_list):
     
     # Calculate financial impact (simulated)
     # Assume 15% holding cost for overstock and 30% margin loss for stockouts
-    df['overstock_loss'] = df.apply(lambda r: max(0, r['Current_Stock'] - r['Predicted_Demand']) * 20 * 0.15, axis=1)
-    df['stockout_loss'] = df.apply(lambda r: max(0, r['Predicted_Demand'] - r['Current_Stock']) * 20 * 0.30, axis=1)
+    df['overstock_loss'] = df.apply(lambda r: max(0, r['Current_Stock'] - r['Predicted_Demand']) * r['Item_MRP'] * 0.15, axis=1)
+    df['stockout_loss'] = df.apply(lambda r: max(0, r['Predicted_Demand'] - r['Current_Stock']) * r['Item_MRP'] * 0.30, axis=1)
     df['total_item_loss'] = df['overstock_loss'] + df['stockout_loss']
     
     overstock_total = float(df['overstock_loss'].sum())
