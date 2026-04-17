@@ -13,7 +13,10 @@ app = Flask(__name__)
 MODEL_PATH = os.path.join("models", "demand_model.pkl")
 SCALER_PATH = os.path.join("models", "scaler.pkl")
 ENCODERS_PATH = os.path.join("models", "encoders.pkl")
-CHARTS_DIR = os.path.join("static", "charts")
+if os.environ.get("VERCEL"):
+    CHARTS_DIR = os.path.join("/tmp", "charts")
+else:
+    CHARTS_DIR = os.path.join("static", "charts")
 
 # Globals mapping
 model = None
@@ -186,7 +189,7 @@ def upload_csv():
             if col in df.columns:
                 batch_df[col] = df[col]
                 
-        generate_charts(batch_df, model=model, feature_names=model.feature_names_in_)
+        generate_charts(batch_df, model=model, feature_names=model.feature_names_in_, charts_dir=CHARTS_DIR)
         
         batch_report = generate_batch_report(results_list)
         
