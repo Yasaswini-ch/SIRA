@@ -315,10 +315,34 @@
     <nav id="mainNav">
         <a href="/" class="logo">SIRA</a>
         <div class="nav-links">
-            <a href="/dashboard">Overview</a>
-            <a href="/simulator" class="active">Simulator</a>
-            <a href="/upload">Batch Upload</a>
+            <a href="/dashboard" id="nav-overview">Overview</a>
+            <a href="/dashboard#predict" id="nav-predict">Predictor</a>
+            <a href="/simulator" id="nav-simulator">Simulator</a>
+            <a href="/upload" id="nav-upload">Batch Upload</a>
+            <a href="/dashboard#charts" id="nav-charts">Analytics</a>
         </div>
+        <script>
+            function updateNavHighlight() {
+                var links = document.querySelectorAll('.nav-links a');
+                links.forEach(function(l) { l.classList.remove('active'); });
+                var path = window.location.pathname;
+                var hash = window.location.hash;
+                if (path === '/simulator') { var el = document.getElementById('nav-simulator'); if(el) el.classList.add('active'); }
+                else if (path === '/upload') { var el = document.getElementById('nav-upload'); if(el) el.classList.add('active'); }
+                else if (path === '/dashboard' || path === '/') {
+                    if (hash === '#predict') { var el = document.getElementById('nav-predict'); if(el) el.classList.add('active'); }
+                    else if (hash === '#charts') { var el = document.getElementById('nav-charts'); if(el) el.classList.add('active'); }
+                    else { var el = document.getElementById('nav-overview'); if(el) el.classList.add('active'); }
+                }
+            }
+            window.addEventListener('hashchange', updateNavHighlight);
+            window.addEventListener('DOMContentLoaded', updateNavHighlight);
+            document.querySelectorAll('.nav-links a').forEach(function(link) {
+                link.addEventListener('click', function() {
+                    setTimeout(updateNavHighlight, 10);
+                });
+            });
+        </script>
     </nav>
 
     <main>
