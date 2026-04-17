@@ -223,11 +223,11 @@ def detect_trend(sales_history: list, window: int = 4) -> dict:
     seasonal_flag = volatility_ratio > 1.5  # Recent volatility is 1.5x baseline
         
     return {
-        "direction": direction,
-        "trend_pct": round(trend_pct, 1),
-        "strength": min(abs(trend_pct) / 10, 1.0),  # 0-1 scale
-        "seasonal_flag": seasonal_flag,
-        "volatility_ratio": round(volatility_ratio, 2),
+        "direction": str(direction),
+        "trend_pct": float(round(trend_pct, 1)),
+        "strength": float(min(abs(trend_pct) / 10, 1.0)),  # 0-1 scale
+        "seasonal_flag": bool(seasonal_flag),
+        "volatility_ratio": float(round(volatility_ratio, 2)),
         "sparkline_data": sales_history[-8:]  # Last 8 periods for chart
     }
 
