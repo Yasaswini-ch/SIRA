@@ -193,3 +193,60 @@ def format_prediction_response(item_id, outlet_id, predicted_demand, current_sto
         },
         "alert": alert_info
     }
+
+def calculate_waste_loss(products: list) -> dict:
+    """
+    products: list of dicts with keys:
+      item_id, item_mrp, current_stock, predicted_demand,
+      reorder_point, item_type, alert_level
+      
+    Returns a comprehensive loss report.
+    """
+    SPOILAGE_RATES = {
+        "Dairy": 0.12,       # 12% monthly spoilage if overstocked
+        "Breads": 0.18,
+        "Fruits and Vegetables": 0.25,
+        "Meat": 0.20,
+        "Frozen Foods": 0.05,
+        "Canned": 0.02,
+        "Household": 0.01,
+        "default": 0.05
+    }
+    PROFIT_MARGIN = 0.15     # 15% average retail margin
+    
+    total_overstock_loss = 0
+    total_stockout_loss = 0
+    item_breakdown = []
+    
+    for p in products:
+        # Overstock loss
+        overstock_units = max(0, p["current_stock"] - p["reorder_point"])
+        rate = SPOILAGE_RATES.get(p["item_type"], SPOILAGE_RATES["default"])
+        overstock_loss = overstock_units * p["item_mrp"] * rate
+        
+        # Stockout loss (missed sales)
+        stockout_units = max(0, p["predicted_demand"] - p["current_stock"])
+        stockout_loss = stockout_units * p["item_mrp"] * PROFIT_MARGIN
+        
+        item_breakdown.append({
+            "item_id": p["item_id"],
+            "item_type": p["item_type"],
+            "overstock_loss": round(overstock_loss, 2),
+            "stockout_loss": round(stockout_loss, 2),
+            "total_loss": round(overstock_loss + stockout_loss, 2)
+        })
+        
+        total_overstock_loss += overstock_loss
+        total_stockout_loss += stockout_loss
+        
+    total_loss = total_overstock_loss + total_stockout_loss
+    potential_savings = total_loss * 0.85
+    
+    return {
+        "total_overstock_loss_inr": round(total_overstock_loss, 2),
+        "total_stockout_loss_inr": round(total_stockout_loss, 2),
+        "total_monthly_loss_inr": round(total_loss, 2),
+        "potential_savings_inr": round(potential_savings, 2),
+        "worst_offenders": sorted(item_breakdown, key=lambda x: x["total_loss"], reverse=True)[:5],
+        "item_breakdown": item_breakdown
+    }

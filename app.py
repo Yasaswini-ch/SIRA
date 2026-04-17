@@ -204,5 +204,40 @@ def upload_csv():
         print(f"[{datetime.datetime.now()}] [ERROR] Batch pipeline failed: {e}")
         return jsonify({"error": "Failed to process CSV batch.", "details": str(e)}), 500
 
+@app.route('/api/loss-report', methods=['GET'])
+def get_loss_report():
+    if not model:
+        return jsonify({"error": "Engine offline. Model missing."}), 503
+        
+    try:
+        # Generate a simulated loss report based on sample batch data
+        df = pd.read_csv("sample_items.csv")
+        from predict import predict_batch
+        from utils import calculate_restock_quantity, calculate_waste_loss
+        
+        results_list, _ = predict_batch(df, model, scaler, encoders)
+        
+        products = []
+        for idx, row in df.iterrows():
+            res = results_list[idx]
+            restock_info = calculate_restock_quantity(res["Predicted_Demand"], res["Current_Stock"])
+            
+            products.append({
+                "item_id": res["Item_Identifier"],
+                "item_mrp": float(row.get("Item_MRP", 0)),
+                "current_stock": res["Current_Stock"],
+                "predicted_demand": res["Predicted_Demand"],
+                "reorder_point": restock_info["reorder_point"],
+                "item_type": str(row.get("Item_Type", "default")),
+                "alert_level": res["Alert_Level"]
+            })
+            
+        report = calculate_waste_loss(products)
+        return jsonify(report)
+        
+    except Exception as e:
+        print(f"[{datetime.datetime.now()}] [ERROR] Loss report failed: {e}")
+        return jsonify({"error": "Failed to generate loss report.", "details": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)

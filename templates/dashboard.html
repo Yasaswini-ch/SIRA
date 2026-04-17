@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard | SIRA</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             /* Palette specific to dashboard UI */
@@ -349,6 +350,68 @@
             padding-top: 0.8rem;
         }
 
+        /* ===== TOOLTIPS & TABLE ===== */
+        .tooltip-container {
+            position: relative;
+            cursor: help;
+        }
+        .tooltip-container .tooltip-text {
+            visibility: hidden;
+            width: 220px;
+            background-color: rgba(15, 23, 42, 0.95);
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 10px;
+            position: absolute;
+            z-index: 10;
+            bottom: 105%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.75rem;
+            font-weight: 500;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+        .data-table th, .data-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .data-table th {
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+        }
+        .data-table tbody tr:hover {
+            background-color: rgba(255,255,255,0.02);
+        }
+        .badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+        .badge-overstock { background: rgba(239, 68, 68, 0.15); color: var(--color-red); }
+        .badge-stockout { background: rgba(249, 115, 22, 0.15); color: var(--color-orange); }
+
         @media (max-width: 1024px) {
             body { flex-direction: column; overflow-y: auto;}
             aside { width: 100%; flex-direction: row; align-items: center; justify-content: space-between; padding: 1rem 2rem; border-right: none; border-bottom: 1px solid var(--border-subtle); }
@@ -444,7 +507,59 @@
             </div>
         </section>
 
-        <!-- Section 3: Interactive Predictor -->
+        <!-- Section 3: Waste Loss Calculator -->
+        <section id="lossCalculator" class="glass-card" style="margin-top: 4rem; border-top: 2px solid var(--color-red);">
+            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 1.5rem;">
+                <div style="width: 10px; height: 35px; background: var(--color-red); border-radius: 4px;"></div>
+                <h2 style="margin-bottom: 0;">Waste & Loss Calculator</h2>
+            </div>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">Real-time financial impact of inventory inefficiencies.</p>
+            
+            <div class="metrics-grid" style="margin-bottom: 2rem;">
+                <div class="metric tooltip-container" style="border-color: rgba(239, 68, 68, 0.3);">
+                    <h4>Monthly Overstock Loss</h4>
+                    <div class="val" id="lossOverstock" style="color: var(--color-red);">₹0</div>
+                    <span class="tooltip-text">Calculated based on category spoilage rates for items where current stock exceeds reorder points.</span>
+                </div>
+                <div class="metric tooltip-container" style="border-color: rgba(249, 115, 22, 0.3);">
+                    <h4>Stockout Missed Revenue</h4>
+                    <div class="val" id="lossStockout" style="color: var(--color-orange);">₹0</div>
+                    <span class="tooltip-text">Calculated as 15% profit margin lost on predicted demand that exceeds current stock.</span>
+                </div>
+                <div class="metric tooltip-container" style="border-color: rgba(16, 185, 129, 0.3); border-bottom: 3px solid var(--color-green);">
+                    <h4>Potential Monthly Savings <span style="font-size:0.8rem; opacity:0.7; font-weight:normal; display:block; margin-top:5px;">with SIRA</span></h4>
+                    <div class="val" id="lossSavings" style="color: var(--color-green);">₹0</div>
+                    <span class="tooltip-text">Estimated at 85% of total combined monthly loss if optimized using AI parameters.</span>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3>Worst Offenders</h3>
+                <button id="btnToggleChart" class="btn-predict" style="padding: 0.5rem 1.5rem; font-size: 0.9rem; width: auto; grid-column: auto;">View by Item Type</button>
+            </div>
+
+            <div id="lossTableView">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Loss Type</th>
+                            <th>Monthly Loss (₹)</th>
+                            <th>Fix</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lossTableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="lossChartView" style="display: none; height: 350px; width: 100%;">
+                <canvas id="lossChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Section 4: Interactive Predictor -->
         <section id="predict" class="glass-card" style="margin-top: 4rem; border-top: 2px solid var(--primary-orange);">
             <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 1.5rem;">
                 <div style="width: 10px; height: 35px; background: var(--primary-orange); border-radius: 4px;"></div>
@@ -609,6 +724,141 @@
                 spinner.style.display = 'none';
             }
         });
+
+        // --- Loss Calculator Logic ---
+        let lossChartInstance = null;
+        let lossData = null;
+
+        async function loadLossReport() {
+            try {
+                const response = await fetch('/api/loss-report');
+                lossData = await response.json();
+                
+                if (lossData.error) throw new Error(lossData.error);
+                
+                // Animate numbers
+                animateValue("lossOverstock", 0, lossData.total_overstock_loss_inr, 1500);
+                animateValue("lossStockout", 0, lossData.total_stockout_loss_inr, 1500);
+                animateValue("lossSavings", 0, lossData.potential_savings_inr, 1500);
+                
+                // Populate Table
+                const tbody = document.getElementById('lossTableBody');
+                tbody.innerHTML = '';
+                lossData.worst_offenders.forEach(item => {
+                    const tr = document.createElement('tr');
+                    
+                    let lossType = 'Overstock';
+                    let badgeClass = 'badge-overstock';
+                    let fix = 'Reduce Reorder Point';
+                    if (item.stockout_loss > item.overstock_loss) {
+                        lossType = 'Stockout';
+                        badgeClass = 'badge-stockout';
+                        fix = 'Increase Safety Stock';
+                    }
+                    
+                    tr.innerHTML = `
+                        <td style="font-weight: 500;">${item.item_id}</td>
+                        <td><span class="badge ${badgeClass}">${lossType}</span></td>
+                        <td style="font-family: 'Outfit', sans-serif;">₹${item.total_loss.toLocaleString('en-IN')}</td>
+                        <td><span style="color: var(--text-muted); font-size: 0.85rem;">${fix}</span></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                
+            } catch (e) {
+                console.error("Loss report failed to load:", e);
+            }
+        }
+
+        function animateValue(id, start, end, duration) {
+            if (start === end) return;
+            const obj = document.getElementById(id);
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                const val = Math.floor(progress * (end - start) + start);
+                obj.innerHTML = `₹${val.toLocaleString('en-IN')}`;
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    obj.innerHTML = `₹${end.toLocaleString('en-IN')}`;
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        document.getElementById('btnToggleChart').addEventListener('click', function() {
+            const tableView = document.getElementById('lossTableView');
+            const chartView = document.getElementById('lossChartView');
+            
+            if (tableView.style.display !== 'none') {
+                tableView.style.display = 'none';
+                chartView.style.display = 'block';
+                this.textContent = 'View as Table';
+                renderLossChart();
+            } else {
+                chartView.style.display = 'none';
+                tableView.style.display = 'block';
+                this.textContent = 'View by Item Type';
+            }
+        });
+
+        function renderLossChart() {
+            if (lossChartInstance) return; 
+            if (!lossData || !lossData.item_breakdown) return;
+            
+            const grouped = {};
+            lossData.item_breakdown.forEach(item => {
+                const type = item.item_type || 'Unknown';
+                if (!grouped[type]) {
+                    grouped[type] = { overstock: 0, stockout: 0 };
+                }
+                grouped[type].overstock += item.overstock_loss;
+                grouped[type].stockout += item.stockout_loss;
+            });
+            
+            const labels = Object.keys(grouped);
+            const overstockData = labels.map(l => grouped[l].overstock);
+            const stockoutData = labels.map(l => grouped[l].stockout);
+            
+            const ctx = document.getElementById('lossChart').getContext('2d');
+            lossChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Overstock Loss (₹)',
+                            backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                            data: overstockData
+                        },
+                        {
+                            label: 'Stockout Missed Revenue (₹)',
+                            backgroundColor: 'rgba(249, 115, 22, 0.8)',
+                            data: stockoutData
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: 'white', font: { family: 'Inter' } } }
+                    },
+                    scales: {
+                        x: { stacked: true, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        y: { stacked: true, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    }
+                }
+            });
+        }
+
+        // Call on load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLossReport();
+        });
+
         // Navbar Scroll Effect
         window.addEventListener('scroll', () => {
             const nav = document.getElementById('mainNav');
