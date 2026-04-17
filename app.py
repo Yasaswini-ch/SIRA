@@ -22,6 +22,8 @@ else:
 model = None
 scaler = None
 encoders = None
+LAST_BATCH_RESULTS = []
+LAST_BATCH_REPORT = {}
 
 def load_ml_assets():
     global model, scaler, encoders
@@ -78,6 +80,25 @@ def upload():
 def serve_chart(filename):
     """Serves local generated charts dynamically."""
     return send_from_directory(CHARTS_DIR, filename)
+
+@app.route('/download-report')
+def download_report():
+    """Generates and streams the professional PDF inventory report."""
+    from utils import generate_pdf_report
+    from flask import make_response
+    
+    # Use global state from last batch if exists, else provide empty indicators
+    results = LAST_BATCH_RESULTS or []
+    report = LAST_BATCH_REPORT or {}
+    
+    pdf_buffer = generate_pdf_report(results, report)
+    
+    filename = f"restock_report_{datetime.datetime.now().strftime('%Y-%m-%d')}.pdf"
+    
+    response = make_response(pdf_buffer.getvalue())
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    return response
 
 @app.route('/health')
 def health():
@@ -196,6 +217,11 @@ def upload_csv():
         generate_charts(batch_df, model=model, feature_names=model.feature_names_in_, charts_dir=CHARTS_DIR)
         
         batch_report = generate_batch_report(results_list)
+        
+        # Persist for PDF download
+        global LAST_BATCH_RESULTS, LAST_BATCH_REPORT
+        LAST_BATCH_RESULTS = results_list
+        LAST_BATCH_REPORT = batch_report
         
         return jsonify({
             "status": "success",

@@ -404,9 +404,14 @@
                         <option value="SAFE">Safe</option>
                     </select>
                 </div>
-                <button class="btn btn-outline" id="btnDownloadCSV">
-                    <span>📥</span> Download Report (CSV)
-                </button>
+                <div style="display: flex; gap: 1rem;">
+                    <button class="btn btn-outline" id="btnDownloadCSV">
+                        <span>📊</span> CSV Report
+                    </button>
+                    <a href="/download-report" class="btn btn-orange" id="btnDownloadPDF" style="text-decoration: none;">
+                        <span>📄</span> PDF Report (Official)
+                    </a>
+                </div>
             </div>
 
             <div class="table-container">

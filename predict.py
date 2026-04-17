@@ -137,6 +137,8 @@ def predict_batch(df, model, scaler, encoders):
             'Current_Stock': curr_stock,
             'Predicted_Demand': round(prediction_val, 2),
             'Restock_Qty': restock_info['suggested_order_qty'],
+            'Item_MRP': float(row.get('Item_MRP', 140)),
+            'Item_Type': str(row.get('Item_Type', 'Item')),
             'Alert_Level': alert_info['level'],
             'Alert_Message': alert_info['message'],
             'Alert_Color': alert_info['color']
@@ -145,19 +147,39 @@ def predict_batch(df, model, scaler, encoders):
     return results_list, warnings
 
 def generate_batch_report(results_list):
-    """Analyzes a successful list response to yield a dashboard-ready reporting metrics package."""
+    """Analyzes a successful list response to yield a dashboard-ready reporting metrics package with financial loss simulations."""
     if not results_list:
         return {}
         
     df = pd.DataFrame(results_list)
     
-    # 5 Key Metrics Evaluated
+    # Calculate financial impact (simulated)
+    # Assume 15% holding cost for overstock and 30% margin loss for stockouts
+    df['overstock_loss'] = df.apply(lambda r: max(0, r['Current_Stock'] - r['Predicted_Demand']) * 20 * 0.15, axis=1)
+    df['stockout_loss'] = df.apply(lambda r: max(0, r['Predicted_Demand'] - r['Current_Stock']) * 20 * 0.30, axis=1)
+    df['total_item_loss'] = df['overstock_loss'] + df['stockout_loss']
+    
+    overstock_total = float(df['overstock_loss'].sum())
+    stockout_total = float(df['stockout_loss'].sum())
+    
+    top_loss_items = df.sort_values(by='total_item_loss', ascending=False).head(10)
+    loss_items_list = []
+    for _, r in top_loss_items.iterrows():
+        loss_items_list.append({'id': r['Item_Identifier'], 'loss': r['total_item_loss']})
+
     report = {
         'total_items_analyzed': len(df),
         'critical_alerts_count': int((df['Alert_Level'] == 'CRITICAL').sum()),
         'warning_alerts_count': int((df['Alert_Level'] == 'WARNING').sum()),
         'average_demand_forecast': round(df['Predicted_Demand'].mean(), 2),
-        'top_5_immediate_restocks': df.sort_values(by='Restock_Qty', ascending=False).head(5).to_dict(orient='records')
+        'top_5_immediate_restocks': df.sort_values(by='Restock_Qty', ascending=False).head(5).to_dict(orient='records'),
+        
+        # Financial Block for PDF
+        'total_loss': overstock_total + stockout_total,
+        'overstock': overstock_total,
+        'stockout': stockout_total,
+        'savings': (overstock_total + stockout_total) * 0.45, # Est. optimization impact
+        'top_items': loss_items_list
     }
     
     return report
