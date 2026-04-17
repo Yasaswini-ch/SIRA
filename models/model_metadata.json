@@ -1,0 +1,28 @@
+{
+    "model_name": "Random Forest",
+    "cv_rmse": 1080.4035,
+    "train_r2": 0.6238,
+    "last_trained": "2026-04-17 21:32:02",
+    "top_features": [
+        {
+            "Feature": "Item_MRP",
+            "Importance": 0.5347865161345473
+        },
+        {
+            "Feature": "Outlet_Type_Grocery Store",
+            "Importance": 0.3108454812151872
+        },
+        {
+            "Feature": "Outlet_Type_Supermarket Type3",
+            "Importance": 0.06417572905430019
+        },
+        {
+            "Feature": "Outlet_Age",
+            "Importance": 0.05764817584261728
+        },
+        {
+            "Feature": "Price_Per_Unit_Weight",
+            "Importance": 0.014987215730737162
+        }
+    ]
+}

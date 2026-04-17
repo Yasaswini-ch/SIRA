@@ -267,6 +267,117 @@
             font-size: 1rem;
         }
 
+        /* ===== MODEL INSIGHTS CARD ===== */
+        .model-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            padding: 0 4rem 4rem;
+            max-width: 1250px;
+            margin: 0 auto;
+        }
+
+        .model-stats-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.4), rgba(15, 23, 42, 0.6));
+            border: 1px solid var(--border-subtle);
+            border-radius: 24px;
+            padding: 2.5rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .metric-box {
+            background: rgba(15, 23, 42, 0.4);
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.03);
+            text-align: left;
+        }
+
+        .metric-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-main);
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .metric-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .feature-list-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.4), rgba(15, 23, 42, 0.6));
+            border: 1px solid var(--border-subtle);
+            border-radius: 24px;
+            padding: 2.5rem;
+        }
+
+        .feature-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.85rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .feature-item:last-child { border-bottom: none; }
+
+        .feature-name { color: var(--text-main); font-weight: 500; font-size: 0.95rem; }
+        .feature-bar-kv {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            width: 60%;
+        }
+        .feature-bar {
+            height: 6px;
+            background: rgba(249, 115, 22, 0.2);
+            border-radius: 10px;
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        .feature-fill {
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            background: var(--primary-orange);
+            border-radius: 10px;
+        }
+        .feature-score { color: var(--primary-orange); font-family: 'Outfit', sans-serif; font-size: 0.85rem; width: 45px; text-align: right;}
+
+        @keyframes statusPulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 10px #22c55e;
+            animation: statusPulse 2s infinite ease-in-out;
+        }
+
+        .section-title {
+            text-align: left;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            color: var(--text-main);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
         /* ===== MOBILE RESPONSIVE ===== */
         @media (max-width: 768px) {
             h1 { font-size: 2.8rem; }
@@ -274,8 +385,9 @@
             .cta-group { flex-direction: column; gap: 1rem; width: 100%; max-width: 300px;}
             .btn { width: 100%; text-align: center; }
             .stats { gap: 2.5rem; flex-direction: column; }
-            .features { padding: 0 2rem 4rem; }
+            .features, .model-grid { padding: 0 2rem 4rem; grid-template-columns: 1fr; }
             .hero { padding: 8rem 2rem 4rem; }
+            .model-stats-card { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -286,10 +398,14 @@
         <a href="/" class="logo">SIRA</a>
         <div class="nav-links">
             <a href="/dashboard" id="nav-overview">Overview</a>
-            <a href="/dashboard#predict" id="nav-predict">Predictor</a>
+            <a href="/predictor" id="nav-predict">Predictor</a>
             <a href="/simulator" id="nav-simulator">Simulator</a>
             <a href="/upload" id="nav-upload">Batch Upload</a>
-            <a href="/dashboard#charts" id="nav-charts">Analytics</a>
+            <a href="/analytics" id="nav-analytics">Analytics</a>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; padding:8px 16px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); border-radius:30px; font-size:0.7rem; font-weight:800; color:#10b981; text-transform:uppercase; letter-spacing:1px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 10px #10b981;animation:pulse 2s infinite;"></div>
+            Live ML Engine
         </div>
     </nav>
 
@@ -299,17 +415,17 @@
         
         <div class="cta-group">
             <a href="/dashboard" class="btn btn-primary">Try Live Demo</a>
-            <a href="/upload" class="btn btn-secondary">Upload CSV</a>
+            <a href="/analytics" class="btn btn-outline">View Analytics</a>
         </div>
 
         <div class="stats">
             <div class="stat-item">
-                <div class="stat-number">94%</div>
-                <div class="stat-label">Forecast Accuracy</div>
+                <div class="stat-number">{% if model_metadata %}{{ (model_metadata.train_r2 * 100) | round(1) }}%{% else %}94%{% endif %}</div>
+                <div class="stat-label">Model R² Score</div>
             </div>
             <div class="stat-item">
-                <div class="stat-number">3</div>
-                <div class="stat-label">Alert Levels</div>
+                <div class="stat-number">{% if model_metadata %}{{ model_metadata.cv_rmse | round(0) }}{% else %}1080{% endif %}</div>
+                <div class="stat-label">Prediction RMSE</div>
             </div>
             <div class="stat-item">
                 <div class="stat-number">Real-Time</div>
@@ -318,17 +434,64 @@
         </div>
     </main>
 
+    {% if model_metadata %}
+    <!-- Model Intelligence Overlay -->
+    <section class="model-grid">
+        <div class="model-stats-card">
+            <div class="section-title" style="grid-column: 1 / -1;">
+                <span>📈</span> Model Performance
+            </div>
+            <div class="metric-box">
+                <span class="metric-value">{{ model_metadata.model_name }}</span>
+                <span class="metric-label">Active Engine</span>
+            </div>
+            <div class="metric-box">
+                <span class="metric-value">{{ model_metadata.cv_rmse | round(2) }}</span>
+                <span class="metric-label">Generalization (CV RMSE)</span>
+            </div>
+            <div class="metric-box">
+                <span class="metric-value">{{ model_metadata.train_r2 | round(4) }}</span>
+                <span class="metric-label">R² (Training Fit)</span>
+            </div>
+            <div class="metric-box">
+                <span class="metric-value">Active</span>
+                <span class="metric-label" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span class="status-dot"></span>
+                    Engine Status
+                </span>
+            </div>
+        </div>
+
+        <div class="feature-list-card">
+            <div class="section-title">
+                <span>🔥</span> Top Demand Drivers
+            </div>
+            {% for feature in model_metadata.top_features %}
+            <div class="feature-item">
+                <span class="feature-name">{{ feature.Feature | replace('_', ' ') }}</span>
+                <div class="feature-bar-kv">
+                    <div class="feature-bar">
+                        <div class="feature-fill" style="width: {{ (feature.Importance / model_metadata.top_features[0].Importance * 100) }}%"></div>
+                    </div>
+                    <span class="feature-score">{{ (feature.Importance * 100) | round(1) }}%</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
     <!-- App Highlights -->
     <section class="features">
         <div class="card">
             <div class="card-icon">🧠</div>
             <h3>Demand Forecast</h3>
-            <p>Our custom XGBoost machine learning model predicts precisely how much of each product you will sell by dynamically analyzing item visibility and real-world market pricing.</p>
+            <p>Our custom {{ model_metadata.model_name if model_metadata else 'Random Forest' }} machine learning model predicts precisely how much of each product you will sell by dynamically analyzing markets.</p>
         </div>
         <div class="card">
             <div class="card-icon">📦</div>
             <h3>Restock Advisor</h3>
-            <p>Make data-backed ordering choices based on an intelligent Decision Engine mapped to an Economic Order Quantity framework scaling seamlessly against customized safety stocks.</p>
+            <p>Make data-backed ordering choices based on an intelligent Decision Engine mapped to an Economic Order Quantity framework scaling against customized safety stocks.</p>
         </div>
         <div class="card">
             <div class="card-icon">⚠️</div>

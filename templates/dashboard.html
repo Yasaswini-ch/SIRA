@@ -428,10 +428,10 @@
         <a href="/" class="logo">SIRA</a>
         <div class="nav-links">
             <a href="/dashboard" id="nav-overview">Overview</a>
-            <a href="/dashboard#predict" id="nav-predict">Predictor</a>
+            <a href="/predictor" id="nav-predict">Predictor</a>
             <a href="/simulator" id="nav-simulator">Simulator</a>
             <a href="/upload" id="nav-upload">Batch Upload</a>
-            <a href="/dashboard#charts" id="nav-charts">Analytics</a>
+            <a href="/analytics" id="nav-analytics">Analytics</a>
         </div>
         <script>
             function updateNavHighlight() {
@@ -441,9 +441,9 @@
                 var hash = window.location.hash;
                 if (path === '/simulator') { var el = document.getElementById('nav-simulator'); if(el) el.classList.add('active'); }
                 else if (path === '/upload') { var el = document.getElementById('nav-upload'); if(el) el.classList.add('active'); }
+                else if (path === '/analytics') { var el = document.getElementById('nav-analytics'); if(el) el.classList.add('active'); }
                 else if (path === '/dashboard' || path === '/') {
                     if (hash === '#predict') { var el = document.getElementById('nav-predict'); if(el) el.classList.add('active'); }
-                    else if (hash === '#charts') { var el = document.getElementById('nav-charts'); if(el) el.classList.add('active'); }
                     else { var el = document.getElementById('nav-overview'); if(el) el.classList.add('active'); }
                 }
             }
@@ -535,79 +535,114 @@
         
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script>
-            document.addEventListener("DOMContentLoaded", function() {
-                Chart.defaults.color = "#94a3b8";
-                Chart.defaults.borderColor = "rgba(255,255,255,0.05)";
-                Chart.defaults.font.family = "'Inter', sans-serif";
-                
-                const commonOptions = {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } }
-                };
+            let charts = {};
+            
+            async function loadDashboardCharts() {
+                try {
+                    const response = await fetch('/api/dashboard-stats');
+                    const data = await response.json();
+                    
+                    if (data.error) throw new Error(data.error);
 
-                // 1. Feature Importance (Horizontal Bar)
-                new Chart(document.getElementById('chartFeature'), {
-                    type: 'bar',
-                    data: {
-                        labels: ['Item MRP', 'Outlet Size', 'Item Visibility', 'Establishment Yr', 'Fat Content'],
-                        datasets: [{
-                            data: [0.45, 0.22, 0.15, 0.12, 0.06],
-                            backgroundColor: 'rgba(249, 115, 22, 0.8)',
-                            borderRadius: 4
-                        }]
-                    },
-                    options: { ...commonOptions, indexAxis: 'y' }
-                });
+                    Chart.defaults.color = "#94a3b8";
+                    Chart.defaults.borderColor = "rgba(255,255,255,0.05)";
+                    Chart.defaults.font.family = "'Inter', sans-serif";
+                    
+                    const commonOptions = {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } }
+                    };
 
-                // 2. Sales Volume (Line area)
-                new Chart(document.getElementById('chartSales'), {
-                    type: 'line',
-                    data: {
-                        labels: ['0-500', '500-1k', '1k-1.5k', '1.5k-2k', '2k-2.5k', '2.5k+'],
-                        datasets: [{
-                            data: [120, 350, 480, 290, 150, 50],
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                            fill: true,
-                            tension: 0.4
-                        }]
-                    },
-                    options: commonOptions
-                });
+                    // 1. Feature Importance (Dynamic from Model)
+                    const featLabels = data.features.map(f => f.Feature.replace('_', ' '));
+                    const featValues = data.features.map(f => f.Importance);
+                    
+                    if(charts.feat) charts.feat.destroy();
+                    charts.feat = new Chart(document.getElementById('chartFeature'), {
+                        type: 'bar',
+                        data: {
+                            labels: featLabels,
+                            datasets: [{
+                                data: featValues,
+                                backgroundColor: 'rgba(249, 115, 22, 0.8)',
+                                borderRadius: 4
+                            }]
+                        },
+                        options: { ...commonOptions, indexAxis: 'y' }
+                    });
 
-                // 3. Alerts Distribution (Doughnut)
-                new Chart(document.getElementById('chartAlerts'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Safe', 'Low', 'Warning', 'Critical'],
-                        datasets: [{
-                            data: [65, 20, 10, 5],
-                            backgroundColor: ['#10b981', '#eab308', '#f97316', '#ef4444'],
-                            borderWidth: 0
-                        }]
-                    },
-                    options: { 
-                        ...commonOptions, 
-                        cutout: '75%', 
-                        plugins: { legend: { display: true, position: 'right', labels: { color: '#f8fafc' } } } 
-                    }
-                });
+                    // 2. Sales Volume (Dynamic from Sample Data)
+                    const salesLabels = Object.keys(data.sales_distribution);
+                    const salesValues = Object.values(data.sales_distribution);
+                    if(charts.sales) charts.sales.destroy();
+                    charts.sales = new Chart(document.getElementById('chartSales'), {
+                        type: 'line',
+                        data: {
+                            labels: salesLabels,
+                            datasets: [{
+                                label: 'Frequency',
+                                data: salesValues,
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                                fill: true,
+                                tension: 0.4
+                            }]
+                        },
+                        options: commonOptions
+                    });
 
-                // 4. Demand by Category (Bar)
-                new Chart(document.getElementById('chartDemand'), {
-                    type: 'bar',
-                    data: {
-                        labels: ['Dairy', 'Drinks', 'Meat', 'Fruits', 'Household', 'Snacks'],
-                        datasets: [{
-                            data: [2100, 1800, 2400, 3100, 1500, 2800],
-                            backgroundColor: '#8b5cf6',
-                            borderRadius: 4
-                        }]
-                    },
-                    options: commonOptions
-                });
-            });
+                    // 3. Alerts Distribution (Dynamic)
+                    const alertLabels = Object.keys(data.alert_distribution);
+                    const alertValues = Object.values(data.alert_distribution);
+                    const alertColors = {
+                        'SAFE': '#10b981',
+                        'LOW': '#eab308',
+                        'WARNING': '#f97316',
+                        'CRITICAL': '#ef4444'
+                    };
+                    const bgColors = alertLabels.map(l => alertColors[l] || '#3b82f6');
+
+                    if(charts.alerts) charts.alerts.destroy();
+                    charts.alerts = new Chart(document.getElementById('chartAlerts'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: alertLabels,
+                            datasets: [{
+                                data: alertValues,
+                                backgroundColor: bgColors,
+                                borderWidth: 0
+                            }]
+                        },
+                        options: { 
+                            ...commonOptions, 
+                            cutout: '75%', 
+                            plugins: { legend: { display: true, position: 'right', labels: { color: '#f8fafc' } } } 
+                        }
+                    });
+
+                    // 4. Demand by Category (Dynamic)
+                    const catLabels = Object.keys(data.category_demand);
+                    const catValues = Object.values(data.category_demand);
+                    if(charts.demand) charts.demand.destroy();
+                    charts.demand = new Chart(document.getElementById('chartDemand'), {
+                        type: 'bar',
+                        data: {
+                            labels: catLabels,
+                            datasets: [{
+                                data: catValues,
+                                backgroundColor: '#8b5cf6',
+                                borderRadius: 4
+                            }]
+                        },
+                        options: commonOptions
+                    });
+                } catch (e) {
+                    console.error("Dashboard charts failed to load:", e);
+                }
+            }
+
+            document.addEventListener("DOMContentLoaded", loadDashboardCharts);
         </script>
 
         <!-- Section 3: Waste Loss Calculator -->
@@ -661,173 +696,10 @@
                 <canvas id="lossChart"></canvas>
             </div>
         </section>
-
-        <!-- Section 4: Interactive Predictor -->
-        <section id="predict" class="glass-card" style="margin-top: 4rem; border-top: 2px solid var(--primary-orange);">
-            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 1.5rem;">
-                <div style="width: 10px; height: 35px; background: var(--primary-orange); border-radius: 4px;"></div>
-                <h2 style="margin-bottom: 0;">On-Demand Simulation Hub</h2>
-            </div>
-            <p style="color: var(--text-muted); margin-bottom: 2rem;">Run real-time scenario modeling for specific inventory SKU/Location combinations.</p>
-            
-            <form id="predictForm">
-                <div class="form-group">
-                    <label>Item Type</label>
-                    <select id="itemType" required>
-                        <option value="Dairy">Dairy</option>
-                        <option value="Soft Drinks">Soft Drinks</option>
-                        <option value="Meat">Meat</option>
-                        <option value="Fruits and Vegetables">Fruits and Vegetables</option>
-                        <option value="Household">Household</option>
-                        <option value="Snack Foods">Snack Foods</option>
-                        <option value="Frozen Foods">Frozen Foods</option>
-                        <option value="Baking Goods">Baking Goods</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Item MRP ($)</label>
-                    <input type="number" id="itemMrp" step="1" value="142" required>
-                </div>
-                <div class="form-group">
-                    <label>Outlet Type</label>
-                    <select id="outletType" required>
-                        <option value="Supermarket Type1">Supermarket Type1</option>
-                        <option value="Supermarket Type2">Supermarket Type2</option>
-                        <option value="Supermarket Type3">Supermarket Type3</option>
-                        <option value="Grocery Store">Grocery Store</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Location Type</label>
-                    <select id="locationType" required>
-                        <option value="Tier 1">Tier 1</option>
-                        <option value="Tier 2">Tier 2</option>
-                        <option value="Tier 3">Tier 3</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Current Stock</label>
-                    <input type="number" id="currentStock" value="15" required>
-                </div>
-                <button type="submit" id="btnPredict" class="btn-predict">
-                    Launch Prediction <span class="spinner" id="spinner"></span>
-                </button>
-            </form>
-
-            <div class="results-container" id="resultsContainer">
-                <div class="result-card rc-blue">
-                    <h4>Demand Forecast</h4>
-                    <div class="val" id="resDemand">0.0</div>
-                </div>
-                <div class="result-card rc-orange">
-                    <h4>Restock Quantity</h4>
-                    <div class="val" id="resRestock">0</div>
-                </div>
-                <div class="result-card" id="alertCard">
-                    <h4>Alert Status</h4>
-                    <div class="val" id="resAlert" style="font-size: 1.5rem; font-weight: 500;">Awaiting Data</div>
-                </div>
-            </div>
-        </section>
-
-        </section>
     </main>
 
     <!-- UI Logic Script -->
     <script>
-        // Real-time DOM tracking counters
-        let totalStats = 0;
-        let cumulativeDemand = 0;
-        let criticalCount = 0;
-        let safeCount = 0;
-
-        document.getElementById('predictForm').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            
-            const btn = document.getElementById('btnPredict');
-            const spinner = document.getElementById('spinner');
-            const resContainer = document.getElementById('resultsContainer');
-            
-            // Interaction States
-            btn.disabled = true;
-            spinner.style.display = 'inline-block';
-            resContainer.style.display = 'none';
-
-            // Extract JSON payload
-            const payload = {
-                Item_Type: document.getElementById('itemType').value,
-                Item_MRP: parseFloat(document.getElementById('itemMrp').value),
-                Outlet_Type: document.getElementById('outletType').value,
-                Outlet_Location_Type: document.getElementById('locationType').value,
-                current_stock: parseInt(document.getElementById('currentStock').value)
-            };
-
-            try {
-                // Fetch to app.py Predict Endpoint
-                const response = await fetch('/predict', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                const data = await response.json();
-                
-                if(data.error) throw new Error(data.error);
-
-                // Populate Specific Results
-                document.getElementById('resDemand').textContent = data.forecast.total_monthly_demand.toFixed(2);
-                document.getElementById('resRestock').textContent = data.restock_directive.suggested_order_qty;
-                
-                const alertCard = document.getElementById('alertCard');
-                const alertText = document.getElementById('resAlert');
-                
-                // Color mappings using hex/css naming
-                const colorMap = {
-                    'red': 'var(--color-red)',
-                    'orange': 'var(--primary-orange)',
-                    'yellow': 'var(--color-yellow)',
-                    'green': 'var(--color-green)'
-                };
-                
-                const hexMap = {
-                    'red': '239, 68, 68',
-                    'orange': '249, 115, 22',
-                    'yellow': '234, 179, 8',
-                    'green': '16, 185, 129'
-                };
-
-                const baseColor = data.alert.color || 'blue';
-                const styleColor = colorMap[baseColor] || 'white';
-                const rgbaColor = hexMap[baseColor] || '255,255,255';
-                
-                alertText.textContent = `${data.alert.level}: ${data.alert.message}`;
-                alertText.style.color = styleColor;
-                alertCard.style.borderColor = `rgba(${rgbaColor}, 0.5)`;
-                alertCard.style.background = `rgba(${rgbaColor}, 0.1)`;
-
-                // Slide Up UI Reveal
-                resContainer.style.display = 'grid';
-
-                // Aggregate Metrics Update
-                totalStats++;
-                cumulativeDemand += data.forecast.total_monthly_demand;
-                if(data.alert.level === 'CRITICAL') criticalCount++;
-                if(data.alert.level === 'SAFE') safeCount++;
-
-                document.getElementById('statTotal').textContent = totalStats;
-                document.getElementById('statAvg').textContent = (cumulativeDemand / totalStats).toFixed(2);
-                document.getElementById('statCritical').textContent = criticalCount;
-                document.getElementById('statSafe').textContent = safeCount;
-
-            } catch (error) {
-                console.error(error);
-                alert('Prediction Integration Error: ' + error.message);
-            } finally {
-                btn.disabled = false;
-                spinner.style.display = 'none';
-            }
-        });
-
         // --- Loss Calculator Logic ---
         let lossChartInstance = null;
         let lossData = null;

@@ -62,11 +62,28 @@ def internal_server_error(e):
 # ----- CORE URL ROUTES -----
 @app.route('/')
 def index():
-    return render_template('index.html')
+    metadata = {}
+    metadata_path = os.path.join("models", "model_metadata.json")
+    try:
+        if os.path.exists(metadata_path):
+            with open(metadata_path, 'r') as f:
+                metadata = json.load(f)
+    except Exception as e:
+        print(f"Error loading metadata: {e}")
+        
+    return render_template('index.html', model_metadata=metadata)
 
 @app.route('/dashboard')
 def dashboard():
     return render_template('dashboard.html')
+
+@app.route('/predictor')
+def predictor():
+    return render_template('predictor.html')
+
+@app.route('/analytics')
+def analytics():
+    return render_template('analytics.html')
 
 @app.route('/simulator')
 def simulator():
@@ -181,6 +198,20 @@ def predict():
     if warnings:
         response['diagnostic_warnings'] = warnings
 
+    # Attach Trend + sparkline for the Predictor Hub charts
+    try:
+        from predict import generate_synthetic_history, detect_trend
+        history = generate_synthetic_history(prediction_val, row.get('Item_Type', 'Snack Foods'))
+        trend = detect_trend(history)
+        response['Trend'] = trend
+    except Exception as te:
+        print(f"[WARN] Trend generation failed: {te}")
+        response['Trend'] = {
+            "direction": "stable",
+            "sparkline_data": [int(prediction_val)] * 8,
+            "seasonal_flag": False
+        }
+
     return jsonify(response)
 
 @app.route('/upload-csv', methods=['POST'])
@@ -259,10 +290,48 @@ def get_loss_report():
             
         report = calculate_waste_loss(products)
         return jsonify(report)
-        
     except Exception as e:
         print(f"[{datetime.datetime.now()}] [ERROR] Loss report failed: {e}")
         return jsonify({"error": "Failed to generate loss report.", "details": str(e)}), 500
+
+@app.route('/api/dashboard-stats', methods=['GET'])
+def get_dashboard_stats():
+    """Provides real-time aggregated metrics and model insights for the dashboard charts."""
+    if not model:
+        return jsonify({"error": "Engine offline"}), 503
+        
+    try:
+        # Load model metadata for feature importance
+        metadata_path = os.path.join("models", "model_metadata.json")
+        features = []
+        if os.path.exists(metadata_path):
+            with open(metadata_path, 'r') as f:
+                meta = json.load(f)
+                features = meta.get('top_features', [])
+
+        # Process sample data for category demand
+        df = pd.read_csv("sample_items.csv")
+        from predict import predict_batch
+        res, _ = predict_batch(df, model, scaler, encoders)
+        res_df = pd.DataFrame(res)
+        
+        cat_demand = res_df.groupby('Item_Type')['Predicted_Demand'].mean().round(2).to_dict()
+        alert_dist = res_df['Alert_Level'].value_counts().to_dict()
+        
+        # Prepare for distribution chart
+        bins = [0, 500, 1000, 1500, 2000, 2500, 5000]
+        labels = ['0-500', '500-1k', '1k-1.5k', '1.5k-2k', '2k-2.5k', '2.5k+']
+        sales_dist = pd.cut(res_df['Predicted_Demand'], bins=bins, labels=labels).value_counts().sort_index().to_dict()
+
+        return jsonify({
+            "features": features,
+            "category_demand": cat_demand,
+            "alert_distribution": alert_dist,
+            "sales_distribution": sales_dist
+        })
+    except Exception as e:
+        print(f"Error generating dashboard stats: {e}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)

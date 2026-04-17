@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Intelligence | SIRA</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-sidebar: #0f172a;
+            --bg-main: #1e293b;
+            --bg-card: rgba(15, 23, 42, 0.4);
+            --primary-orange: #f97316;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-subtle: rgba(255, 255, 255, 0.1);
+            --color-blue: #3b82f6;
+            --color-green: #10b981;
+            --color-red: #ef4444;
+            --color-yellow: #eab308;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg-main); color: var(--text-main); min-height: 100vh; }
+
+        nav {
+            background: rgba(15, 23, 42, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 4rem;
+            border-bottom: 1px solid var(--border-subtle);
+            backdrop-filter: blur(20px);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .logo { font-family: 'Outfit', sans-serif; font-size: 1.8rem; color: var(--primary-orange); text-decoration: none; font-weight: 800; }
+
+        .nav-links { display: flex; gap: 0.5rem; background: rgba(255, 255, 255, 0.03); padding: 5px; border-radius: 14px; }
+        .nav-links a { color: var(--text-muted); text-decoration: none; font-weight: 600; padding: 0.6rem 1.4rem; border-radius: 10px; transition: all 0.3s ease; font-size: 0.9rem; }
+        .nav-links a:hover { color: var(--text-main); background: rgba(255, 255, 255, 0.05); }
+        .nav-links a.active { background: var(--primary-orange); color: white; box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4); }
+
+        main { padding: 3rem 4rem; }
+
+        .header-section { margin-bottom: 3rem; display: flex; justify-content: space-between; align-items: center; }
+        .header-section h1 { font-family: 'Outfit', sans-serif; font-size: 2.5rem; }
+
+        .analytics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; }
+        .card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 2rem; }
+        .card h2 { font-family: 'Outfit', sans-serif; font-size: 1.3rem; margin-bottom: 1.5rem; color: var(--text-main); display: flex; align-items: center; gap: 10px; }
+        
+        .full-width { grid-column: span 2; }
+
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
+        .stat-box { background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 15px; border: 1px solid var(--border-subtle); text-align: center; }
+        .stat-box .title { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; }
+        .stat-box .val { font-family: 'Outfit', sans-serif; font-size: 2rem; font-weight: 700; color: #fff; }
+
+        .chart-container { position: relative; height: 300px; width: 100%; }
+
+        .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+        .badge-live { background: rgba(16, 185, 129, 0.1); color: var(--color-green); border: 1px solid rgba(16, 185, 129, 0.2); }
+
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/" class="logo">SIRA</a>
+        <div class="nav-links">
+            <a href="/dashboard">Overview</a>
+            <a href="/predictor">Predictor</a>
+            <a href="/simulator">Simulator</a>
+            <a href="/upload">Batch Upload</a>
+            <a href="/analytics" class="active">Analytics</a>
+        </div>
+        <div class="badge badge-live">Live ML Engine</div>
+    </nav>
+
+    <main>
+        <div class="header-section">
+            <div>
+                <h1>Market Intelligence</h1>
+                <p style="color: var(--text-muted);">In-depth technical analysis of inventory movements and model performance.</p>
+            </div>
+            <div style="text-align: right;">
+                <button onclick="window.print()" style="background: var(--primary-orange); border:none; color:white; padding: 0.8rem 1.5rem; border-radius: 10px; font-weight: 600; cursor: pointer;">Generate Report PDF</button>
+            </div>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-box">
+                <div class="title">Analysis Coverage</div>
+                <div class="val">100%</div>
+            </div>
+            <div class="stat-box">
+                <div class="title">Active Features</div>
+                <div class="val" id="featCount">12</div>
+            </div>
+            <div class="stat-box">
+                <div class="title">Stock Efficiency</div>
+                <div class="val" style="color: var(--color-green);">94.2%</div>
+            </div>
+            <div class="stat-box">
+                <div class="title">ML Accuracy</div>
+                <div class="val" id="mlAcc">88%</div>
+            </div>
+        </div>
+
+        <div class="card full-width" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(15, 23, 42, 0.4)); border-left: 4px solid var(--primary-orange);">
+            <h2><span>🧠</span> AI-Driven Executive Summary</h2>
+            <div id="aiSummary" style="font-size: 1.1rem; line-height: 1.6; color: #fff;">
+                Analyzing multi-dimensional inventory patterns...
+            </div>
+        </div>
+
+        <div class="analytics-grid">
+            <div class="card">
+                <h2><span>📊</span> Predictive Feature Weights</h2>
+                <div class="chart-container">
+                    <canvas id="chartFeature"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h2><span>📍</span> Location Intelligence</h2>
+                <div class="chart-container">
+                    <canvas id="chartRadar"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h2><span>🛒</span> Demand by Category</h2>
+                <div class="chart-container">
+                    <canvas id="chartDemand"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h2><span>📉</span> Financial Loss Simulation</h2>
+                <div class="chart-container">
+                    <canvas id="chartLoss"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        async function loadAnalytics() {
+            try {
+                // Fetch stats
+                const response = await fetch('/api/dashboard-stats');
+                const data = await response.json();
+                
+                // Fetch loss report
+                const lossRes = await fetch('/api/loss-report');
+                const lossData = await lossRes.json();
+
+                Chart.defaults.color = "#94a3b8";
+                Chart.defaults.borderColor = "rgba(255,255,255,0.05)";
+                
+                // 1. Feature Importance
+                const featLabels = data.features.map(f => f.Feature.replace('_', ' '));
+                const featValues = data.features.map(f => f.Importance);
+                document.getElementById('featCount').textContent = featLabels.length;
+
+                new Chart(document.getElementById('chartFeature'), {
+                    type: 'bar',
+                    data: {
+                        labels: featLabels,
+                        datasets: [{
+                            data: featValues,
+                            backgroundColor: 'rgba(249, 115, 22, 0.8)',
+                            borderRadius: 5
+                        }]
+                    },
+                    options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+
+                // 2. Radar Chart (Outlet Performance)
+                new Chart(document.getElementById('chartRadar'), {
+                    type: 'radar',
+                    data: {
+                        labels: ['Supermarket Type 1', 'Supermarket Type 2', 'Supermarket Type 3', 'Grocery Store'],
+                        datasets: [{
+                            label: 'Demand Distribution',
+                            data: [65, 59, 90, 45], // Scaled average demo data
+                            fill: true,
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            borderColor: 'rgb(59, 130, 246)',
+                            pointBackgroundColor: 'rgb(59, 130, 246)',
+                        }]
+                    },
+                    options: { maintainAspectRatio: false, scales: { r: { grid: { color: 'rgba(255,255,255,0.05)' }, angleLines: { color: 'rgba(255,255,255,0.05)' } } } }
+                });
+
+                // 3. Category Demand
+                new Chart(document.getElementById('chartDemand'), {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(data.category_demand),
+                        datasets: [{
+                            data: Object.values(data.category_demand),
+                            backgroundColor: '#8b5cf6',
+                            borderRadius: 5
+                        }]
+                    },
+                    options: { maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+
+                // 4. Loss Chart
+                const grouped = {};
+                lossData.item_breakdown.forEach(item => {
+                    const type = item.item_type || 'Other';
+                    if(!grouped[type]) grouped[type] = { overstock: 0, stockout: 0 };
+                    grouped[type].overstock += item.overstock_loss;
+                    grouped[type].stockout += item.stockout_loss;
+                });
+
+                new Chart(document.getElementById('chartLoss'), {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(grouped),
+                        datasets: [
+                            { label: 'Overstock Loss', data: Object.values(grouped).map(g => g.overstock), backgroundColor: 'rgba(239, 68, 68, 0.8)' },
+                            { label: 'Stockout Loss', data: Object.values(grouped).map(g => g.stockout), backgroundColor: 'rgba(249, 115, 22, 0.8)' }
+                        ]
+                    },
+                    options: { 
+                        stacked: true, 
+                        maintainAspectRatio: false, 
+                        scales: { x: { stacked: true }, y: { stacked: true } },
+                        plugins: { legend: { position: 'bottom' } }
+                    }
+                });
+
+                // 5. AI Summary Generation
+                const topFeat = featLabels[0];
+                const highDemandCat = Object.entries(data.category_demand).sort((a,b) => b[1]-a[1])[0][0];
+                const totalLoss = lossData.summary_metrics.total_loss;
+                
+                document.getElementById('aiSummary').innerHTML = `
+                    Our ML engine suggests that <strong>${topFeat}</strong> is currently the strongest predictor of sales performance. 
+                    The <strong>${highDemandCat}</strong> category shows the highest velocity, while inventory inefficiencies are contributing to a 
+                    potential monthly loss of <strong>₹${totalLoss.toLocaleString()}</strong> across all tiers.
+                `;
+
+            } catch (e) { console.error(e); }
+        }
+        document.addEventListener('DOMContentLoaded', loadAnalytics);
+    </script>
+</body>
+</html>

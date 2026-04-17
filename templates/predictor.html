@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Predictor Hub | SIRA</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-sidebar: #0f172a;
+            --bg-main: #1e293b;
+            --bg-card: rgba(15, 23, 42, 0.4);
+            --primary-orange: #f97316;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-subtle: rgba(255, 255, 255, 0.1);
+            --color-blue: #3b82f6;
+            --color-green: #10b981;
+            --color-red: #ef4444;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg-main); color: var(--text-main); min-height: 100vh; }
+
+        nav {
+            background: rgba(15, 23, 42, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 4rem;
+            border-bottom: 1px solid var(--border-subtle);
+            backdrop-filter: blur(20px);
+            position: sticky; top: 0; z-index: 1000;
+        }
+
+        .logo { font-family: 'Outfit', sans-serif; font-size: 1.8rem; color: var(--primary-orange); text-decoration: none; font-weight: 800; }
+        .nav-links { display: flex; gap: 0.5rem; background: rgba(255, 255, 255, 0.03); padding: 5px; border-radius: 14px; }
+        .nav-links a { color: var(--text-muted); text-decoration: none; font-weight: 600; padding: 0.6rem 1.4rem; border-radius: 10px; transition: all 0.3s ease; font-size: 0.9rem; }
+        .nav-links a:hover { color: var(--text-main); background: rgba(255, 255, 255, 0.05); }
+        .nav-links a.active { background: var(--primary-orange); color: white; box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4); }
+
+        main { padding: 3rem 4rem; display: grid; grid-template-columns: 400px 1fr; gap: 2.5rem; }
+
+        .form-card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 2rem; align-self: start; }
+        .form-group { margin-bottom: 1.2rem; }
+        .form-group label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-weight: 600; }
+        select, input { width: 100%; padding: 0.8rem; background: rgba(0,0,0,0.2); border: 1px solid var(--border-subtle); border-radius: 10px; color: white; outline: none; }
+        
+        .btn-predict { width: 100%; padding: 1rem; background: var(--primary-orange); border: none; color: white; border-radius: 12px; font-weight: 800; cursor: pointer; margin-top: 1rem; transition: all 0.3s ease; }
+        .btn-predict:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(249, 115, 22, 0.4); }
+
+        .results-container { display: flex; flex-direction: column; gap: 2rem; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+        .result-card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 1.5rem; position: relative; overflow: hidden; }
+        .result-card h3 { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 1px; }
+        .result-card .val { font-family: 'Outfit'; font-size: 2.5rem; font-weight: 700; }
+
+        .trend-chart-box { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 2rem; height: 350px; }
+        
+        /* Stunning Features Styles */
+        .comparison-workbench { border: 1px solid #3b82f6; background: rgba(59, 130, 246, 0.05); }
+        .ai-recommendation { background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(15,23,42,0.4)); border-left: 5px solid var(--color-green); }
+        
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; margin-top: 10px; }
+        .badge-optimized { background: var(--color-green); color: white; }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-result { animation: slideIn 0.5s ease forwards; }
+
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/" class="logo">SIRA</a>
+        <div class="nav-links">
+            <a href="/dashboard">Overview</a>
+            <a href="/predictor" class="active">Predictor</a>
+            <a href="/simulator">Simulator</a>
+            <a href="/upload">Batch Upload</a>
+            <a href="/analytics">Analytics</a>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; padding:8px 16px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); border-radius:30px; font-size:0.7rem; font-weight:800; color:#10b981; text-transform:uppercase; letter-spacing:1px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 10px #10b981;animation:pulse 2s infinite;"></div>
+            Live ML Engine
+        </div>
+    </nav>
+
+    <main>
+        <!-- Simulation Controls -->
+        <div class="form-card">
+            <div style="margin-bottom: 1.5rem;">
+                <p style="color: var(--primary-orange); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">AI Predictor Hub</p>
+                <h2 style="font-family: 'Outfit'; font-size: 1.6rem; margin-top: 0.3rem;">On-Demand Simulation Hub</h2>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;">Run real-time scenario modeling for specific inventory SKU/Location combinations.</p>
+            </div>
+            <form id="predictForm">
+                <div class="form-group">
+                    <label>Product Category</label>
+                    <select id="itemType" required>
+                        <option value="Dairy">Dairy</option>
+                        <option value="Soft Drinks">Soft Drinks</option>
+                        <option value="Meat">Meat</option>
+                        <option value="Fruits and Vegetables">Fruits and Vegetables</option>
+                        <option value="Household">Household</option>
+                        <option value="Snack Foods" selected>Snack Foods</option>
+                        <option value="Frozen Foods">Frozen Foods</option>
+                        <option value="Baking Goods">Baking Goods</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Item MRP ($)</label>
+                    <input type="number" id="itemMrp" value="142" required>
+                </div>
+                <div class="form-group">
+                    <label>Outlet Type</label>
+                    <select id="outletType" required>
+                        <option value="Supermarket Type1">Supermarket Type1</option>
+                        <option value="Supermarket Type2">Supermarket Type2</option>
+                        <option value="Supermarket Type3">Supermarket Type3</option>
+                        <option value="Grocery Store">Grocery Store</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Location Type</label>
+                    <select id="locationType" required>
+                        <option value="Tier 1">Tier 1</option>
+                        <option value="Tier 2" selected>Tier 2</option>
+                        <option value="Tier 3">Tier 3</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Current Warehouse Stock</label>
+                    <input type="number" id="currentStock" value="150" required>
+                </div>
+                <button type="submit" class="btn-predict">RUN ENGINE PREDICTION</button>
+            </form>
+
+            <div id="statusIndicator" style="margin-top: 2rem; display: none;">
+                <p style="color: var(--color-blue); font-size: 0.9rem; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                    <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--color-blue); animation:pulse 1.5s infinite;"></span>
+                    Querying ML Cluster...
+                </p>
+            </div>
+        </div>
+
+        <!-- Predictor Display -->
+        <div class="results-container" id="resultsArea" style="display: none;">
+            
+            <!-- STUNNING FEATURE 1: AI RECOMMENDATION ENGINE -->
+            <div class="result-card ai-recommendation">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h3 style="color: var(--color-green);">SIRA AI Smart Advice</h3>
+                        <p id="aiAdviceText" style="font-size: 1.1rem; line-height: 1.5; margin-top: 5px;">
+                            Evaluating inventory delta and market demand spikes...
+                        </p>
+                    </div>
+                    <div class="badge badge-optimized">Optimized</div>
+                </div>
+            </div>
+
+            <div class="grid-3">
+                <div class="result-card">
+                    <h3>Forecasted Demand</h3>
+                    <div class="val" id="resDemand">0</div>
+                    <p style="color: var(--text-muted); font-size: 0.8rem;">Units per month</p>
+                </div>
+                <div class="result-card">
+                    <h3>Restock Target</h3>
+                    <div class="val" id="resRestock" style="color: var(--primary-orange);">0</div>
+                    <p style="color: var(--text-muted); font-size: 0.8rem;">Quantity to order</p>
+                </div>
+                <div class="result-card">
+                    <h3>Inventory Status</h3>
+                    <div class="val" id="resAlert" style="font-size: 1.8rem; margin-top: 0.5rem;">CRITICAL</div>
+                </div>
+            </div>
+
+            <!-- STUNNING FEATURE 2: 8-MONTH SEASONAL TREND -->
+            <div class="trend-chart-box">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 1rem;">
+                    <div>
+                        <h3 style="font-family: 'Outfit';">Predictive Seasonality Analysis</h3>
+                        <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 4px;">Projected monthly demand for the selected SKU across Indian retail seasons.</p>
+                    </div>
+                    <div id="trendBadge" style="font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; background: rgba(255,255,255,0.05); color: var(--text-muted);"></div>
+                </div>
+                <div style="height: 200px;">
+                    <canvas id="trendChart"></canvas>
+                </div>
+                <div style="display:flex; gap: 1.5rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-subtle); flex-wrap: wrap;">
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">📅 <strong style="color:#fff;">Jan</strong> — New Year surge (+20%)</span>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">🎨 <strong style="color:#fff;">Mar–Apr</strong> — Holi / Summer start (+15%)</span>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">🪔 <strong style="color:#fff;">Oct–Nov</strong> — Diwali peak (+40%)</span>
+                </div>
+            </div>
+
+            <!-- STUNNING FEATURE 3: COMPARATIVE WORKBENCH -->
+            <div class="result-card comparison-workbench" id="comparisonWorkbench" style="display: none;">
+                <h3 style="color: var(--color-blue);">Scenario Comparison Delta</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                    <div>
+                        <p style="color: var(--text-muted); font-size: 0.85rem;">vs. Previous Scenario</p>
+                        <div style="font-size: 1.8rem; font-weight: 700; color: #fff;" id="deltaText">+0%</div>
+                    </div>
+                    <div id="deltaIcon" style="font-size: 2.5rem;">📈</div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        let trendChart = null;
+        let lastPrediction = null;
+
+        document.getElementById('predictForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const resultsArea = document.getElementById('resultsArea');
+            const status = document.getElementById('statusIndicator');
+            
+            status.style.display = 'block';
+            resultsArea.style.opacity = '0.3';
+
+            const payload = {
+                Item_Type: document.getElementById('itemType').value,
+                Item_MRP: parseFloat(document.getElementById('itemMrp').value),
+                Outlet_Type: document.getElementById('outletType').value,
+                Outlet_Location_Type: document.getElementById('locationType').value,
+                current_stock: parseInt(document.getElementById('currentStock').value)
+            };
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                // Update UI with correct data structure from backend
+                const forecastVal = data.forecast.total_monthly_demand;
+                const restockVal = data.restock_directive.suggested_order_qty;
+                const alertLevel = data.alert.level;
+                const alertColor = data.alert.color;
+
+                document.getElementById('resDemand').innerText = Math.round(forecastVal).toLocaleString();
+                document.getElementById('resRestock').innerText = Math.round(restockVal).toLocaleString();
+                document.getElementById('resAlert').innerText = alertLevel;
+                
+                // Color coordination
+                const color = alertColor === 'red' ? '#ef4444' : (alertColor === 'orange' ? '#f97316' : '#10b981');
+                document.getElementById('resAlert').style.color = color;
+
+                // 1. AI Recommendation Engine Logic
+                let advice = "";
+                if(alertLevel === 'CRITICAL' || alertLevel === 'WARNING') {
+                    advice = `Immediate restock of <strong>${Math.round(restockVal)} units</strong> required. Current stocks are failing to meet the projected high-velocity demand for ${payload.item_type}.`;
+                } else if(restockVal <= 0) {
+                    advice = `Inventory is optimized. Current supplies will comfortably cover the next 30-day forecast. No capital allocation needed for this SKU.`;
+                } else {
+                    advice = `Standard restocking recommended. Maintenance of current supply chain rhythm is sufficient for steady-state demand.`;
+                }
+                document.getElementById('aiAdviceText').innerHTML = advice;
+
+                // 2. Trend Chart Logic - sparkline_data is 8 items (last 8 months)
+                if (data.Trend && data.Trend.sparkline_data) {
+                    const allMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    const sparkData = data.Trend.sparkline_data;
+                    const trendData = sparkData.map((val, idx) => ({
+                        month: allMonths[idx] || `M${idx+1}`,
+                        demand: val
+                    }));
+                    updateTrendChart(trendData, color);
+
+                    // Update the trend direction badge
+                    const dir = data.Trend.direction;
+                    const badge = document.getElementById('trendBadge');
+                    if (dir === 'up') { badge.innerText = '↑ Trending Up'; badge.style.background = 'rgba(16,185,129,0.15)'; badge.style.color = '#10b981'; }
+                    else if (dir === 'down') { badge.innerText = '↓ Trending Down'; badge.style.background = 'rgba(239,68,68,0.15)'; badge.style.color = '#ef4444'; }
+                    else { badge.innerText = '→ Stable'; badge.style.background = 'rgba(148,163,184,0.1)'; badge.style.color = '#94a3b8'; }
+                }
+
+                // 3. Comparative Workbench Logic
+                if(lastPrediction !== null) {
+                    const delta = ((forecastVal - lastPrediction) / lastPrediction * 100).toFixed(1);
+                    document.getElementById('comparisonWorkbench').style.display = 'block';
+                    document.getElementById('deltaText').innerText = (delta > 0 ? "+" : "") + delta + "% Demand Change";
+                    document.getElementById('deltaIcon').innerText = delta > 0 ? "📈" : "📉";
+                    document.getElementById('deltaText').style.color = delta > 0 ? "#ef4444" : "#10b981";
+                }
+                lastPrediction = forecastVal;
+
+                // Final Reveal
+                status.style.display = 'none';
+                resultsArea.style.display = 'flex';
+                resultsArea.style.opacity = '1';
+                resultsArea.classList.add('animate-result');
+
+            } catch (err) {
+                console.error(err);
+                status.style.display = 'none';
+            }
+        });
+
+        function updateTrendChart(labels, color) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            const dataValues = labels.map(l => l.demand);
+            const monthLabels = labels.map(l => l.month);
+
+            if (trendChart) trendChart.destroy();
+
+            trendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: monthLabels,
+                    datasets: [{
+                        label: 'Projected Demand',
+                        data: dataValues,
+                        borderColor: color,
+                        backgroundColor: color + '22',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
