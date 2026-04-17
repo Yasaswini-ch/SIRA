@@ -2,15 +2,22 @@ import os
 import joblib
 import pandas as pd
 import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-matplotlib.use('Agg')
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    HAS_CHARTS = True
+except ImportError:
+    HAS_CHARTS = False
 
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
-from xgboost import XGBRegressor
+try:
+    from xgboost import XGBRegressor
+    HAS_XGB = True
+except ImportError:
+    HAS_XGB = False
 
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, mean_absolute_percentage_error
 from sklearn.model_selection import cross_val_score, KFold
@@ -46,8 +53,10 @@ def train_and_evaluate(models_dir='models', charts_dir='static/charts'):
             n_estimators=100, 
             random_state=42, 
             n_jobs=-1
-        ),
-        "XGBoost Regressor": XGBRegressor(
+        )
+    }
+    if HAS_XGB:
+        models["XGBoost Regressor"] = XGBRegressor(
             n_estimators=500,
             max_depth=6,
             learning_rate=0.05,
@@ -57,7 +66,6 @@ def train_and_evaluate(models_dir='models', charts_dir='static/charts'):
             random_state=42,
             n_jobs=-1
         )
-    }
     
     results = []
     
@@ -130,15 +138,18 @@ def train_and_evaluate(models_dir='models', charts_dir='static/charts'):
             'Importance': importances
         }).sort_values(by='Importance', ascending=False).head(20) # Focusing on Top 20 for readability
         
-        sns.set_style("whitegrid")
-        plt.figure(figsize=(11, 8))
-        sns.barplot(data=feat_imp_df, x='Importance', y='Feature', hue='Feature', legend=False, palette='Oranges_r')
-        plt.title(f'Top 20 Critical Demand Drivers ({best_model_name})', fontsize=16)
-        plt.xlabel('Relative Importance (Absolute Coefficient / IG)')
-        plt.tight_layout()
-        plt.savefig(os.path.join(charts_dir, 'feature_importance.png'), dpi=150)
-        plt.close()
-        print("Feature importance chart rendered and saved to static/charts/feature_importance.png")
+        if HAS_CHARTS:
+            sns.set_style("whitegrid")
+            plt.figure(figsize=(11, 8))
+            sns.barplot(data=feat_imp_df, x='Importance', y='Feature', hue='Feature', legend=False, palette='Oranges_r')
+            plt.title(f'Top 20 Critical Demand Drivers ({best_model_name})', fontsize=16)
+            plt.xlabel('Relative Importance (Absolute Coefficient / IG)')
+            plt.tight_layout()
+            plt.savefig(os.path.join(charts_dir, 'feature_importance.png'), dpi=150)
+            plt.close()
+            print("Feature importance chart rendered and saved to static/charts/feature_importance.png")
+        else:
+            print("Feature importance chart skipped due to missing optional plotting libraries.")
     else:
         print(f"\nFeature importances missing for {best_model_name}. Skipping chart creation.")
 

@@ -1,15 +1,18 @@
 import os
 import numpy as np
 import pandas as pd
-import matplotlib
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-# Set non-interactive backend
-matplotlib.use('Agg')
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    HAS_CHARTS = True
+except ImportError:
+    HAS_CHARTS = False
 
 def apply_chart_style():
     """Sets the premium dark dashboard theme for all matplotlib/seaborn plots."""
+    if not HAS_CHARTS: return
     sns.set_style("darkgrid", {"axes.facecolor": "#1E293B", "grid.color": "#2D3748"})
     plt.rcParams.update({
         'figure.facecolor': '#1E293B',
@@ -28,6 +31,10 @@ def generate_charts(results_df, model=None, feature_names=None, charts_dir='stat
     Creates and saves 6 distinct analysis charts to the static directory 
     using a professional dark-mode premium aesthetic.
     """
+    if not HAS_CHARTS:
+        print("Charts skipped due to missing optional plotting dependencies on Vercel.")
+        return
+        
     os.makedirs(charts_dir, exist_ok=True)
     apply_chart_style()
     accent = "#F97316"
