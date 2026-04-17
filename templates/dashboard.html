@@ -427,11 +427,34 @@
     <nav id="mainNav">
         <a href="/" class="logo">SIRA</a>
         <div class="nav-links">
-            <a href="/dashboard" class="active">Overview</a>
-            <a href="#predict">Predictor</a>
-            <a href="/upload">Batch Upload</a>
-            <a href="#charts">Analytics</a>
+            <a href="/dashboard" id="nav-overview">Overview</a>
+            <a href="/dashboard#predict" id="nav-predict">Predictor</a>
+            <a href="/simulator" id="nav-simulator">Simulator</a>
+            <a href="/upload" id="nav-upload">Batch Upload</a>
+            <a href="/dashboard#charts" id="nav-charts">Analytics</a>
         </div>
+        <script>
+            function updateNavHighlight() {
+                var links = document.querySelectorAll('.nav-links a');
+                links.forEach(function(l) { l.classList.remove('active'); });
+                var path = window.location.pathname;
+                var hash = window.location.hash;
+                if (path === '/simulator') { var el = document.getElementById('nav-simulator'); if(el) el.classList.add('active'); }
+                else if (path === '/upload') { var el = document.getElementById('nav-upload'); if(el) el.classList.add('active'); }
+                else if (path === '/dashboard' || path === '/') {
+                    if (hash === '#predict') { var el = document.getElementById('nav-predict'); if(el) el.classList.add('active'); }
+                    else if (hash === '#charts') { var el = document.getElementById('nav-charts'); if(el) el.classList.add('active'); }
+                    else { var el = document.getElementById('nav-overview'); if(el) el.classList.add('active'); }
+                }
+            }
+            window.addEventListener('hashchange', updateNavHighlight);
+            window.addEventListener('DOMContentLoaded', updateNavHighlight);
+            document.querySelectorAll('.nav-links a').forEach(function(link) {
+                link.addEventListener('click', function() {
+                    setTimeout(updateNavHighlight, 10);
+                });
+            });
+        </script>
         <div class="nav-right">
             <div class="system-pill">
                 <div class="pulse-dot"></div>
@@ -477,35 +500,110 @@
         <section id="charts" class="charts-grid">
             <div class="chart-box">
                 <h2>Predictive Feature Importance</h2>
-                <img src="/charts/feature_importance.png" alt="Feature Importance Chart" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
-                <p class="chart-desc">Identifies the top 15 key factors, such as price and visibility, driving forecasted product demand.</p>
+                <div style="position: relative; height: 250px; width: 100%; margin-bottom: 20px;">
+                    <canvas id="chartFeature"></canvas>
+                </div>
+                <p class="chart-desc">Identifies the top key factors driving forecasted product demand based on model weights.</p>
             </div>
             <div class="chart-box">
                 <h2>Sales Volume Distribution</h2>
-                <img src="/charts/sales_distribution.png" alt="Sales Distribution Chart" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
+                <div style="position: relative; height: 250px; width: 100%; margin-bottom: 20px;">
+                    <canvas id="chartSales"></canvas>
+                </div>
                 <p class="chart-desc">Visualizes the frequency and spread of unit sales across the entire inventory catalog.</p>
             </div>
             <div class="chart-box">
                 <h2>Inventory Alert Distribution</h2>
-                <img src="/charts/alert_distribution.png" alt="Alert Distribution" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
+                <div style="position: relative; height: 250px; width: 100%; margin-bottom: 20px;">
+                    <canvas id="chartAlerts"></canvas>
+                </div>
                 <p class="chart-desc">Breakdown of stock health levels showing the percentage of items in critical vs safe states.</p>
             </div>
             <div class="chart-box">
-                <h2>Restock Intensity Heatmap</h2>
-                <img src="/charts/restock_heatmap.png" alt="Restock Heatmap" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
-                <p class="chart-desc">Maps replenishment needs across different outlet types to pinpoint logistics hotspots.</p>
-            </div>
-            <div class="chart-box">
                 <h2>Demand by Category</h2>
-                <img src="/charts/demand_by_category.png" alt="Demand by Category" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
-                <p class="chart-desc">Compares average forecasted sales volume across the top 10 product categories.</p>
-            </div>
-            <div class="chart-box">
-                <h2>Price vs Demand Correlation</h2>
-                <img src="/charts/mrp_vs_demand.png" alt="MRP vs Demand" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
-                <p class="chart-desc">Analyzes the relationship between unit price (MRP) and sales volume across store locations.</p>
+                <div style="position: relative; height: 250px; width: 100%; margin-bottom: 20px;">
+                    <canvas id="chartDemand"></canvas>
+                </div>
+                <p class="chart-desc">Compares average forecasted sales volume across top product categories.</p>
             </div>
         </section>
+        
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                Chart.defaults.color = "#94a3b8";
+                Chart.defaults.borderColor = "rgba(255,255,255,0.05)";
+                Chart.defaults.font.family = "'Inter', sans-serif";
+                
+                const commonOptions = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                };
+
+                // 1. Feature Importance (Horizontal Bar)
+                new Chart(document.getElementById('chartFeature'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Item MRP', 'Outlet Size', 'Item Visibility', 'Establishment Yr', 'Fat Content'],
+                        datasets: [{
+                            data: [0.45, 0.22, 0.15, 0.12, 0.06],
+                            backgroundColor: 'rgba(249, 115, 22, 0.8)',
+                            borderRadius: 4
+                        }]
+                    },
+                    options: { ...commonOptions, indexAxis: 'y' }
+                });
+
+                // 2. Sales Volume (Line area)
+                new Chart(document.getElementById('chartSales'), {
+                    type: 'line',
+                    data: {
+                        labels: ['0-500', '500-1k', '1k-1.5k', '1.5k-2k', '2k-2.5k', '2.5k+'],
+                        datasets: [{
+                            data: [120, 350, 480, 290, 150, 50],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: commonOptions
+                });
+
+                // 3. Alerts Distribution (Doughnut)
+                new Chart(document.getElementById('chartAlerts'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Safe', 'Low', 'Warning', 'Critical'],
+                        datasets: [{
+                            data: [65, 20, 10, 5],
+                            backgroundColor: ['#10b981', '#eab308', '#f97316', '#ef4444'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: { 
+                        ...commonOptions, 
+                        cutout: '75%', 
+                        plugins: { legend: { display: true, position: 'right', labels: { color: '#f8fafc' } } } 
+                    }
+                });
+
+                // 4. Demand by Category (Bar)
+                new Chart(document.getElementById('chartDemand'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Dairy', 'Drinks', 'Meat', 'Fruits', 'Household', 'Snacks'],
+                        datasets: [{
+                            data: [2100, 1800, 2400, 3100, 1500, 2800],
+                            backgroundColor: '#8b5cf6',
+                            borderRadius: 4
+                        }]
+                    },
+                    options: commonOptions
+                });
+            });
+        </script>
 
         <!-- Section 3: Waste Loss Calculator -->
         <section id="lossCalculator" class="glass-card" style="margin-top: 4rem; border-top: 2px solid var(--color-red);">

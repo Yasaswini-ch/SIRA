@@ -28,7 +28,7 @@ In retail, stock management is often reactive. Businesses either suffer from **f
 ### 🏃 Quick Start (3 Steps)
 1.  **Clone & Setup**: 
     ```bash
-    git clone https://github.com/Yasaswini-ch/SIRA.git && cd inventory-restock-advisor
+    git clone https://github.com/Yasaswini-ch/SIRA.git && cd SIRA
     pip install -r requirements.txt
     ```
 2.  **Generate Model**: 
@@ -72,9 +72,11 @@ In retail, stock management is often reactive. Businesses either suffer from **f
 ---
 
 ### 🎯 Core Features
-1.  **Real-Time Predictor**: Single-item sales forecasting with intelligent fallback for missing data.
-2.  **Batch Analysis**: Drag-and-drop CSV uploader that generates bulk restock reports instantly.
-3.  **Smart Decision Engine**: Automated reorder point calculation based on lead-time and safety stock.
+1.  **Vercel Serverless Ready**: Architected to bypass standard AWS Lambda 500MB size limits. Heavy libraries like XGBoost/Matplotlib are completely optional and automatically disabled on serverless instances. Includes `vercel.json`.
+2.  **What-If Simulator UI (`/simulator`)**: A live, pure-JS interface to test supply chain shocks (demand surges, lead time delays) instantly with Delta indicators against base scenarios.
+3.  **Real-Time Predictor**: Single-item sales forecasting with intelligent fallback for missing data.
+4.  **Batch Analysis**: Drag-and-drop CSV uploader that generates bulk restock reports instantly.
+5.  **Smart Decision Engine**: Automated reorder point calculation based on lead-time and safety stock.
 
 ---
 
