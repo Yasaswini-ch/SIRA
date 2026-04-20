@@ -2,6 +2,8 @@ import os
 import joblib
 import pandas as pd
 import numpy as np
+import datetime
+import json
 try:
     import matplotlib
     matplotlib.use('Agg')
@@ -12,7 +14,7 @@ except ImportError:
     HAS_CHARTS = False
 
 from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor, VotingRegressor
 try:
     from xgboost import XGBRegressor
     HAS_XGB = True
@@ -47,23 +49,36 @@ def train_and_evaluate(models_dir='models', charts_dir='static/charts'):
     print("2. INITIALIZING MODELS")
     print("=" * 70)
     
+    rf = RandomForestRegressor(
+        n_estimators=200,
+        max_depth=8,
+        min_samples_leaf=50,
+        random_state=42, 
+        n_jobs=-1
+    )
+    
     models = {
         "Linear Regression": LinearRegression(),
-        "Random Forest": RandomForestRegressor(
-            n_estimators=100, 
-            random_state=42, 
-            n_jobs=-1
-        )
+        "Random Forest": rf
     }
+    
     if HAS_XGB:
-        models["XGBoost Regressor"] = XGBRegressor(
-            n_estimators=500,
-            max_depth=6,
+        xgb = XGBRegressor(
+            n_estimators=300,
+            max_depth=4,
             learning_rate=0.05,
             subsample=0.8,
             colsample_bytree=0.8,
             reg_alpha=0.1,
+            reg_lambda=1.0,
             random_state=42,
+            n_jobs=-1
+        )
+        models["XGBoost Regressor"] = xgb
+        
+        # Create Ensemble: Voting Regressor
+        models["Ensemble (RF + XGB)"] = VotingRegressor(
+            estimators=[('rf', rf), ('xgb', xgb)],
             n_jobs=-1
         )
     
@@ -124,6 +139,15 @@ def train_and_evaluate(models_dir='models', charts_dir='static/charts'):
     joblib.dump(best_model_instance, best_model_path)
     print(f"\nBest model effectively serialized and saved to: {best_model_path}")
     
+    # Export Metadata for App Landing Page
+    metadata = {
+        "model_name": best_model_name,
+        "cv_rmse": results_df.loc[best_idx, 'CV RMSE Mean'],
+        "train_r2": results_df.loc[best_idx, 'Train R2'],
+        "last_trained": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "top_features": []
+    }
+    
     # Generate and save Feature Importances Plot
     print("\nGenerating feature importances visualization...")
     importances = None
@@ -131,17 +155,34 @@ def train_and_evaluate(models_dir='models', charts_dir='static/charts'):
         importances = best_model_instance.feature_importances_
     elif hasattr(best_model_instance, 'coef_'):
         importances = np.abs(best_model_instance.coef_)
+    elif isinstance(best_model_instance, VotingRegressor):
+        # Average importances from base estimators
+        base_importances = []
+        for name, est in best_model_instance.estimators_:
+            if hasattr(est, 'feature_importances_'):
+                base_importances.append(est.feature_importances_)
+            elif hasattr(est, 'coef_'):
+                base_importances.append(np.abs(est.coef_))
+        
+        if base_importances:
+            importances = np.mean(base_importances, axis=0)
         
     if importances is not None:
         feat_imp_df = pd.DataFrame({
             'Feature': feature_names,
             'Importance': importances
-        }).sort_values(by='Importance', ascending=False).head(20) # Focusing on Top 20 for readability
+        }).sort_values(by='Importance', ascending=False)
+        
+        # Save top 5 features to metadata
+        metadata["top_features"] = feat_imp_df.head(5).to_dict(orient='records')
+        
+        # Focusing on Top 20 for readability in plot
+        plot_df = feat_imp_df.head(20)
         
         if HAS_CHARTS:
             sns.set_style("whitegrid")
             plt.figure(figsize=(11, 8))
-            sns.barplot(data=feat_imp_df, x='Importance', y='Feature', hue='Feature', legend=False, palette='Oranges_r')
+            sns.barplot(data=plot_df, x='Importance', y='Feature', hue='Feature', legend=False, palette='Oranges_r')
             plt.title(f'Top 20 Critical Demand Drivers ({best_model_name})', fontsize=16)
             plt.xlabel('Relative Importance (Absolute Coefficient / IG)')
             plt.tight_layout()
@@ -150,8 +191,11 @@ def train_and_evaluate(models_dir='models', charts_dir='static/charts'):
             print("Feature importance chart rendered and saved to static/charts/feature_importance.png")
         else:
             print("Feature importance chart skipped due to missing optional plotting libraries.")
-    else:
-        print(f"\nFeature importances missing for {best_model_name}. Skipping chart creation.")
+    
+    # Save metadata JSON
+    with open(os.path.join(models_dir, 'model_metadata.json'), 'w') as f:
+        json.dump(metadata, f, indent=4)
+    print(f"Model metadata exported to: {os.path.join(models_dir, 'model_metadata.json')}")
 
 if __name__ == "__main__":
     train_and_evaluate()
