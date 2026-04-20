@@ -333,5 +333,83 @@ def get_dashboard_stats():
         print(f"Error generating dashboard stats: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/heatmap-data', methods=['GET'])
+def get_heatmap_data():
+    """Returns pivot matrices for the restock intensity and loss heatmaps on the dashboard."""
+    if not model:
+        return jsonify({"error": "Engine offline"}), 503
+
+    try:
+        df = pd.read_csv("sample_items.csv")
+        from predict import predict_batch
+        from utils import calculate_restock_quantity, calculate_waste_loss
+
+        results_list, _ = predict_batch(df, model, scaler, encoders)
+        res_df = pd.DataFrame(results_list)
+
+        # Merge original columns needed for pivoting
+        res_df['Outlet_Type'] = df['Outlet_Type'].values
+        res_df['Item_Type']   = df['Item_Type'].values
+        res_df['Item_MRP']    = df['Item_MRP'].values
+
+        # 1. Restock Intensity Pivot (Outlet_Type × Item_Type → avg Restock_Qty)
+        restock_pivot = (
+            res_df.groupby(['Outlet_Type', 'Item_Type'])['Restock_Qty']
+            .mean()
+            .fillna(0)
+            .reset_index()
+        )
+
+        # 2. Loss Intensity Pivot (Outlet_Type × Item_Type → total loss ₹)
+        products = []
+        for _, row in res_df.iterrows():
+            ri = calculate_restock_quantity(row['Predicted_Demand'], row['Current_Stock'])
+            products.append({
+                'item_id':          row['Item_Identifier'],
+                'item_mrp':         float(row['Item_MRP']),
+                'current_stock':    row['Current_Stock'],
+                'predicted_demand': row['Predicted_Demand'],
+                'reorder_point':    ri['reorder_point'],
+                'item_type':        row['Item_Type'],
+                'alert_level':      row['Alert_Level'],
+                'outlet_type':      row['Outlet_Type'],
+            })
+
+        # Compute per-item losses and re-attach outlet/category info
+        SPOILAGE_RATES = {
+            "Dairy": 0.12, "Breads": 0.18, "Fruits and Vegetables": 0.25,
+            "Meat": 0.20, "Frozen Foods": 0.05, "Canned": 0.02,
+            "Household": 0.01, "default": 0.05
+        }
+        PROFIT_MARGIN = 0.15
+        loss_rows = []
+        for p in products:
+            overstock_units = max(0, p['current_stock'] - p['reorder_point'])
+            rate = SPOILAGE_RATES.get(p['item_type'], SPOILAGE_RATES['default'])
+            overstock_loss = overstock_units * p['item_mrp'] * rate
+            stockout_units = max(0, p['predicted_demand'] - p['current_stock'])
+            stockout_loss  = stockout_units * p['item_mrp'] * PROFIT_MARGIN
+            loss_rows.append({
+                'Outlet_Type': p['outlet_type'],
+                'Item_Type':   p['item_type'],
+                'total_loss':  round(overstock_loss + stockout_loss, 2)
+            })
+        loss_df = pd.DataFrame(loss_rows)
+        loss_pivot = (
+            loss_df.groupby(['Outlet_Type', 'Item_Type'])['total_loss']
+            .sum()
+            .fillna(0)
+            .reset_index()
+        )
+
+        return jsonify({
+            "restock": restock_pivot.to_dict(orient='records'),
+            "loss":    loss_pivot.to_dict(orient='records'),
+        })
+    except Exception as e:
+        print(f"[ERROR] Heatmap data generation failed: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
